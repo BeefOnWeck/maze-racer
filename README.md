@@ -1,0 +1,1 @@
+WASM maze racing game written in Rust and based off of [Grant Handy's post about ray casting](https://grantshandy.github.io/posts/raycasting/).
