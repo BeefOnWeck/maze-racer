@@ -1,9 +1,7 @@
 // Initially based on [wasm4-raycaster](https://github.com/grantshandy/wasm4-raycaster)
 // which carries an MIT License and is Copyright (c) 2023 Grant Handy.
 
-#![cfg_attr(not(test), no_std)]
-
-use core::{arch::wasm32, panic::{PanicInfo, self}};
+#![no_std]
 
 mod state;
 use state::State;
@@ -18,11 +16,6 @@ const BUTTON_DOWN: u8 = 128;
 
 extern "C" {
     fn vline(x: i32, y: i32, len: u32);
-}
-
-#[panic_handler]
-fn phandler(_: &PanicInfo<'_>) -> ! {
-    wasm32::unreachable();
 }
 
 static mut STATE: State = State::new();

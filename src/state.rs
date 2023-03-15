@@ -3,8 +3,7 @@ use core::f32::consts::{PI, FRAC_PI_2};
 
 use heapless::Vec;
 
-mod maze;
-use maze::find_next_passage;
+use maze_gen::find_next_passage;
 
 const MAP: [u16; 8] = [
     0b1111111111111111,

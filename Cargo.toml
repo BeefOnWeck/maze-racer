@@ -19,3 +19,4 @@ panic = "abort"
 libm = "0.2"
 rand = { version = "0.8.5", default-features = false, features = ["small_rng"]}
 heapless = "0.7.16"
+maze_gen = { git = "https://github.com/BeefOnWeck/maze-gen.git" }
