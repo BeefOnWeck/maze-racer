@@ -2,6 +2,8 @@ use libm::{ceilf, cosf, fabsf, floorf, sinf, sqrtf, tanf};
 use core::f32::consts::{PI, FRAC_PI_2};
 
 use heapless::Vec;
+use rand::SeedableRng;
+use rand::rngs::SmallRng;
 
 use maze_gen::find_next_passage;
 
@@ -16,10 +18,10 @@ const MAP: [u16; 8] = [
     0b1111111111111111,
 ];
 
-const WIDTH: usize = 16; // number of horizontal cells in maze
-const HEIGHT: usize = 16; // number of vertical cells in maze
+const WIDTH: usize = 13; // number of horizontal cells in maze
+const HEIGHT: usize = 13; // number of vertical cells in maze
 const NUM_CELLS: usize = WIDTH * HEIGHT;
-const MAX_PASSAGES: usize = NUM_CELLS * 4; // memory to reserve for maze
+const MAX_PASSAGES: usize = NUM_CELLS; // memory to reserve for maze
 
 const FOV: f32 = PI / 2.7; // The player's field of view.
 const HALF_FOV: f32 = FOV * 0.5; // Half the player's field of view.
@@ -58,6 +60,13 @@ impl State {
             visited: Vec::<bool,NUM_CELLS>::new(),
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new()
         }
+    }
+
+    pub fn gen_maze(&mut self) {
+        let index = 0;
+        let mut rng = SmallRng::seed_from_u64(11);
+        self.visited.extend_from_slice(&[false;NUM_CELLS]).unwrap();
+        find_next_passage(index, WIDTH, HEIGHT, &mut self.visited, &mut self.passages, &mut rng);
     }
 
     /// move the character

@@ -20,7 +20,10 @@ extern "C" {
 
 static mut STATE: State = State::new();
 
-// start()
+#[no_mangle]
+unsafe fn start() {
+    STATE.gen_maze();
+}
 
 #[no_mangle]
 unsafe fn update() {
