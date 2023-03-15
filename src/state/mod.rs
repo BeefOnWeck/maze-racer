@@ -1,6 +1,11 @@
 use libm::{ceilf, cosf, fabsf, floorf, sinf, sqrtf, tanf};
 use core::f32::consts::{PI, FRAC_PI_2};
 
+use heapless::Vec;
+
+mod maze;
+use maze::find_next_passage;
+
 const MAP: [u16; 8] = [
     0b1111111111111111,
     0b1000001010000101,
@@ -11,6 +16,11 @@ const MAP: [u16; 8] = [
     0b1000100000001101,
     0b1111111111111111,
 ];
+
+const WIDTH: usize = 16; // number of horizontal cells in maze
+const HEIGHT: usize = 16; // number of vertical cells in maze
+const NUM_CELLS: usize = WIDTH * HEIGHT;
+const MAX_PASSAGES: usize = NUM_CELLS * 4; // memory to reserve for maze
 
 const FOV: f32 = PI / 2.7; // The player's field of view.
 const HALF_FOV: f32 = FOV * 0.5; // Half the player's field of view.
@@ -32,12 +42,24 @@ fn point_in_wall(x: f32, y: f32) -> bool {
 pub struct State {
     pub player_x: f32,
     pub player_y: f32,
-    pub player_angle: f32
+    pub player_angle: f32,
+    pub visited: Vec<bool,NUM_CELLS>,
+    pub passages: Vec<(usize,usize),MAX_PASSAGES>
 }
 
 const STEP_SIZE: f32 = 0.045;
 
 impl State {
+
+    pub const fn new() -> State {
+        State {
+            player_x: 1.5,
+            player_y: 1.5,
+            player_angle: 0.0,
+            visited: Vec::<bool,NUM_CELLS>::new(),
+            passages: Vec::<(usize,usize),MAX_PASSAGES>::new()
+        }
+    }
 
     /// move the character
     pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool) {

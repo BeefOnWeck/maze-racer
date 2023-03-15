@@ -1,7 +1,7 @@
 // Initially based on [wasm4-raycaster](https://github.com/grantshandy/wasm4-raycaster)
 // which carries an MIT License and is Copyright (c) 2023 Grant Handy.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 use core::{arch::wasm32, panic::{PanicInfo, self}};
 
@@ -25,11 +25,9 @@ fn phandler(_: &PanicInfo<'_>) -> ! {
     wasm32::unreachable();
 }
 
-static mut STATE: State = State {
-    player_x: 1.5,
-    player_y: 1.5,
-    player_angle: 0.0
-};
+static mut STATE: State = State::new();
+
+// start()
 
 #[no_mangle]
 unsafe fn update() {
