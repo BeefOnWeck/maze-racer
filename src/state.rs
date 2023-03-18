@@ -1,22 +1,14 @@
 use libm::{ceilf, cosf, fabsf, floorf, sinf, sqrtf, tanf};
 use core::f32::consts::{PI, FRAC_PI_2};
 
-use heapless::Vec;
+use core::fmt::Write;
+use heapless::{String,Vec};
 use rand::SeedableRng;
 use rand::rngs::SmallRng;
 
-use maze_gen::find_next_passage;
+use maze_gen::{find_passages,find_walls};
 
-const MAP: [u16; 8] = [
-    0b1111111111111111,
-    0b1000001010000101,
-    0b1011100000110101,
-    0b1000111010010001,
-    0b1010001011110111,
-    0b1011101001100001,
-    0b1000100000001101,
-    0b1111111111111111,
-];
+use crate::wasm4::trace;
 
 const WIDTH: usize = 13; // number of horizontal cells in maze
 const HEIGHT: usize = 13; // number of vertical cells in maze
@@ -26,16 +18,22 @@ const MAX_PASSAGES: usize = NUM_CELLS; // memory to reserve for maze
 const FOV: f32 = PI / 2.7; // The player's field of view.
 const HALF_FOV: f32 = FOV * 0.5; // Half the player's field of view.
 const ANGLE_STEP: f32 = FOV / 160.0; // The angle between each ray.
-const WALL_HEIGHT: f32 = 100.0; // A magic number.
+const WALL_HEIGHT: f32 = 80.0; // A magic number.
 
 fn distance(a: f32, b: f32) -> f32 {
     sqrtf((a * a) + (b * b))
 }
 
-/// Check if the map contains a wall at a point.
-fn point_in_wall(x: f32, y: f32) -> bool {
-    match MAP.get(y as usize) {
+fn point_in_horizonal_wall(x: f32, y: f32, horizontal_walls: &Vec<u16,{HEIGHT+1}>) -> bool {
+    match horizontal_walls.get(y as usize) {
         Some(line) => (line & (0b1 << x as usize)) != 0,
+        None => true
+    }
+}
+
+fn point_in_vertical_wall(x: f32, y: f32, vertical_walls: &Vec<u16,{WIDTH+1}>) -> bool {
+    match vertical_walls.get(x as usize) {
+        Some(line) => (line & (0b1 << y as usize)) != 0,
         None => true
     }
 }
@@ -44,8 +42,10 @@ pub struct State {
     pub player_x: f32,
     pub player_y: f32,
     pub player_angle: f32,
-    pub visited: Vec<bool,NUM_CELLS>,
-    pub passages: Vec<(usize,usize),MAX_PASSAGES>
+    visited: Vec<bool,NUM_CELLS>,
+    passages: Vec<(usize,usize),MAX_PASSAGES>,
+    pub horizontal_walls: Vec<u16,{HEIGHT+1}>,
+    pub vertical_walls: Vec<u16,{WIDTH+1}>
 }
 
 const STEP_SIZE: f32 = 0.045;
@@ -54,19 +54,51 @@ impl State {
 
     pub const fn new() -> State {
         State {
-            player_x: 1.5,
-            player_y: 1.5,
+            player_x: 0.5,
+            player_y: 0.5,
             player_angle: 0.0,
             visited: Vec::<bool,NUM_CELLS>::new(),
-            passages: Vec::<(usize,usize),MAX_PASSAGES>::new()
+            passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
+            horizontal_walls: Vec::<u16,{HEIGHT+1}>::new(),
+            vertical_walls: Vec::<u16,{WIDTH+1}>::new()
         }
     }
 
-    pub fn gen_maze(&mut self) {
-        let index = 0;
+    pub fn generate_maze(&mut self) {
+        
+        // TODO: Replace this fixed seed with a random external one
         let mut rng = SmallRng::seed_from_u64(11);
+
+        // Initialize an empty maze
         self.visited.extend_from_slice(&[false;NUM_CELLS]).unwrap();
-        find_next_passage(index, WIDTH, HEIGHT, &mut self.visited, &mut self.passages, &mut rng);
+        self.horizontal_walls.extend_from_slice(&[0b0000000000000000;{HEIGHT+1}]).unwrap();
+        self.vertical_walls.extend_from_slice(&[0b0000000000000000;{WIDTH+1}]).unwrap();
+
+        // Randomly create passages to define the maze, starting from first index
+        let index = 0;
+        find_passages(index, WIDTH, HEIGHT, &mut self.visited, &mut self.passages, &mut rng);
+
+        // for p in &self.passages {
+        //     let mut data = String::<32>::new();
+        //     write!(data, "({},{})",p.0,p.1).unwrap();
+        //     trace(data);
+        // }
+
+        // Use the passages to define the walls of the maze
+        find_walls(WIDTH, HEIGHT, &mut self.passages, &mut self.horizontal_walls, &mut self.vertical_walls);
+
+        // for hw in &self.horizontal_walls {
+        //     let mut data = String::<32>::new();
+        //     write!(data, "{:#018b}",hw).unwrap();
+        //     trace(data);
+        // }
+        // trace("");
+        // for vw in &self.vertical_walls {
+        //     let mut data = String::<32>::new();
+        //     write!(data, "{:#018b}",vw).unwrap();
+        //     trace(data);
+        // }
+
     }
 
     /// move the character
@@ -86,15 +118,32 @@ impl State {
 
         if right {
             self.player_angle -= STEP_SIZE;
+
         }
 
         if left {
             self.player_angle += STEP_SIZE;
         }
 
+        // let x = (self.player_x*100.0).round()/100.0;
+        // let y = (self.player_y*100.0).round()/100.0;
+        // let a = (self.player_angle*100.0).round()/100.0;
+        // let mut data = String::<32>::new();
+        // write!(data, "x:{x}, y:{y}, a:{a}").unwrap();
+        // trace(data);
+
+        // let pihw = point_in_horizonal_wall(self.player_x, self.player_y, &self.horizontal_walls);
+        // let pivw = point_in_vertical_wall(self.player_x, self.player_y, &self.vertical_walls);
+        // let mut data = String::<32>::new();
+        // write!(data, "pihw:{pihw}, pivw:{pivw}").unwrap();
+        // trace(data);
+
+        // TODO: Need a different way to detect a collision with walls
         // if moving us on this frame would put us into a wall, just revert it
-        if point_in_wall(self.player_x, self.player_y) {
-            (self.player_x, self.player_y) = previous_position;
+        if  point_in_horizonal_wall(self.player_x, self.player_y, &self.horizontal_walls) ||
+            point_in_vertical_wall(self.player_x, self.player_y, &self.vertical_walls)
+        {
+            // (self.player_x, self.player_y) = previous_position;
         }
     }
 
@@ -103,6 +152,9 @@ impl State {
         // This tells you if the angle is "facing up"
         // regardless of how big the angle is.
         let up = fabsf(floorf(angle / PI) % 2.0) != 0.0;
+        // let mut data = String::<32>::new();
+        // write!(data, "Up:{up}").unwrap();
+        // trace(data);
 
         // first_y and first_x are the first grid intersections
         // that the ray intersects with.
@@ -112,6 +164,18 @@ impl State {
             floorf(self.player_y) - self.player_y
         };
         let first_x = -first_y / tanf(angle);
+
+        // let px = (self.player_x*100.0).round()/100.0;
+        // let py = (self.player_y*100.0).round()/100.0;
+        // let mut data = String::<64>::new();
+        // write!(data, "Player - px:{px}, py:{py}").unwrap();
+        // trace(data);
+
+        // let fx = (first_x*100.0).round()/100.0;
+        // let fy = (first_y*100.0).round()/100.0;
+        // let mut data = String::<64>::new();
+        // write!(data, "Horizatonl - fx:{fx}, fy:{fy}").unwrap();
+        // trace(data);
 
         // dy and dx are the "ray extension" values mentioned earlier.
         let dy = if up { 1.0 } else { -1.0 };
@@ -138,11 +202,50 @@ impl State {
             let current_y = if up {
                 next_y + self.player_y
             } else {
-                next_y + self.player_y - 1.0
+                next_y + self.player_y
             };
 
+            // if flag == true {
+            //     let px = self.player_x;
+            //     let py = self.player_y;
+            //     let nx = next_x;
+            //     let ny = next_y;
+            //     let mut data = String::<64>::new();
+            //     write!(data, "px:{px}, py:{py}").unwrap();
+            //     trace(data);
+            //     let mut data = String::<64>::new();
+            //     write!(data, "nx:{nx}, ny:{ny}").unwrap();
+            //     trace(data);
+            //     let x = current_x;
+            //     let y = current_y;
+            //     match self.horizontal_walls.get(y as usize) {
+            //         Some(line) => {
+            //             let yo = (y*100.0).round()/100.0;
+            //             let lo = line;
+            //             let xo = (x*100.0).round()/100.0;
+            //             let xb = (0b1 << x as usize);
+            //             let mut data = String::<64>::new();
+            //             write!(data, "yo:{yo}, lo:{:b}",lo).unwrap();
+            //             trace(data);
+            //             let mut data = String::<64>::new();
+            //             write!(data, "xo:{xo}, xb:{:b}", xb).unwrap();
+            //             trace(data);
+            //             (line & (0b1 << y as usize)) != 0;
+            //         },
+            //         None => {true;}
+            //     }
+            // }
+
+            // if angle >= 0.5 && angle < 0.55 {
+            //     let cx = (current_x*100.0).round()/100.0;
+            //     let cy = (current_y*100.0).round()/100.0;
+            //     let mut data = String::<64>::new();
+            //     write!(data, "Horizontal - cx:{cx}, cy:{cy}").unwrap();
+            //     trace(data);
+            // }
+
             // Tell the loop to quit if we've just hit a wall.
-            if point_in_wall(current_x, current_y) {
+            if point_in_horizonal_wall(current_x, current_y, &self.horizontal_walls) {
                 break;
             }
 
@@ -161,6 +264,9 @@ impl State {
         // This tells you if the angle is "facing up"
         // regardless of how big the angle is.
         let right = fabsf(floorf((angle - FRAC_PI_2) / PI) % 2.0) != 0.0;
+        // let mut data = String::<32>::new();
+        // write!(data, "Right:{right}").unwrap();
+        // trace(data);
 
         // first_y and first_x are the first grid intersections
         // that the ray intersects with. 
@@ -170,6 +276,12 @@ impl State {
             floorf(self.player_x) - self.player_x
         };
         let first_y = -tanf(angle) * first_x;
+
+        // let fx = (first_x*100.0).round()/100.0;
+        // let fy = (first_y*100.0).round()/100.0;
+        // let mut data = String::<64>::new();
+        // write!(data, "Vertical - fx:{fx}, fy:{fy}").unwrap();
+        // trace(data);
 
         // dy and dx are the "ray extension" values mentioned earlier.
         let dx = if right { 1.0 } else { -1.0 };
@@ -195,12 +307,33 @@ impl State {
             let current_x = if right {
                 next_x + self.player_x
             } else {
-                next_x + self.player_x - 1.0
+                next_x + self.player_x
             };
             let current_y = next_y + self.player_y;
 
+            // let x = current_x;
+            // let y = current_y;
+            // match self.vertical_walls.get(x as usize) {
+            //     Some(line) => {
+            //         let xo = (x*100.0).round()/100.0;
+            //         let lo = line;
+            //         let yo = (y*100.0).round()/100.0;
+            //         let yb = (0b1 << y as usize);
+            //         let mut data = String::<64>::new();
+            //         write!(data, "xo:{xo}, lo:{:b}",lo).unwrap();
+            //         trace(data);
+            //         let mut data = String::<64>::new();
+            //         write!(data, "yo:{yo}, yb:{:b}", yb).unwrap();
+            //         trace(data);
+            //         (line & (0b1 << y as usize)) != 0;
+            //     },
+            //     None => {true;}
+            // }
+
+            // break;
+
             // Tell the loop to quit if we've just hit a wall.
-            if point_in_wall(current_x, current_y) {
+            if point_in_vertical_wall(current_x, current_y, &self.vertical_walls) {
                 break;
             }
 
@@ -233,6 +366,16 @@ impl State {
             // intersections for this angle.
             let h_dist = self.horizontal_intersection(angle);
             let v_dist = self.vertical_intersection(angle);
+            // break;
+
+            // if idx == 80 {
+            //     let hd = (h_dist*100.0).round()/100.0;
+            //     let vd = (v_dist*100.0).round()/100.0;
+            //     let a = (angle*100.0).round()/100.0;
+            //     let mut data = String::<32>::new();
+            //     write!(data, "hd:{hd}, vd:{vd}, a:{a}").unwrap();
+            //     trace(data);
+            // }
 
             let (min_dist, shadow) = if h_dist < v_dist {
                 (h_dist, false)

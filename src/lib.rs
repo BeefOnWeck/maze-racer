@@ -4,6 +4,8 @@
 #![no_std]
 
 mod state;
+mod wasm4;
+
 use state::State;
 
 const DRAW_COLORS: *mut u16 = 0x14 as *mut u16;
@@ -22,7 +24,7 @@ static mut STATE: State = State::new();
 
 #[no_mangle]
 unsafe fn start() {
-    STATE.gen_maze();
+    STATE.generate_maze();
 }
 
 #[no_mangle]
