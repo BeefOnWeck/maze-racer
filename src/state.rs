@@ -1,11 +1,15 @@
-use libm::{ceilf, cosf, fabsf, floorf, sinf, sqrtf, tanf};
+use libm::{ceilf, cosf, fabsf, floorf, sinf, sqrtf, tanf, roundf};
 use core::f32::consts::{PI, FRAC_PI_2};
 
-use heapless::{Vec};
 use rand::SeedableRng;
 use rand::rngs::SmallRng;
 
-use maze_gen::{find_passages,find_walls};
+use core::fmt::Write;
+use heapless::{String,Vec};
+
+use crate::wasm4::trace;
+
+use maze_gen::{find_passages, find_walls, there_is_no_passage_here};
 
 const WIDTH: usize = 13; // number of horizontal cells in maze
 const HEIGHT: usize = 13; // number of vertical cells in maze
@@ -19,6 +23,10 @@ const WALL_HEIGHT: f32 = 80.0; // A magic number.
 
 fn distance(a: f32, b: f32) -> f32 {
     sqrtf((a * a) + (b * b))
+}
+
+fn get_index(x: f32, y: f32, width: usize, height: usize) -> usize {
+    (x as usize) + (y as usize) * width
 }
 
 fn point_in_horizonal_wall(x: f32, y: f32, horizontal_walls: &Vec<u16,{HEIGHT+1}>) -> bool {
@@ -84,6 +92,7 @@ impl State {
     pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool) {
         // store our current position in case we might need it later
         let previous_position = (self.player_x, self.player_y);
+        let previous_index = get_index(self.player_x, self.player_y, WIDTH, HEIGHT);
 
         if up {
             self.player_x += cosf(self.player_angle) * STEP_SIZE;
@@ -104,12 +113,29 @@ impl State {
             self.player_angle += STEP_SIZE;
         }
 
-        // TODO: Need a different way to detect a collision with walls
+        let new_index = get_index(self.player_x, self.player_y, WIDTH, HEIGHT);
+
+        // let tinph = there_is_no_passage_here(previous_index, new_index, &self.passages);
+        // let t1 = roundf(self.player_x*100.0)/100.0;
+        // let t2 = roundf(self.player_y*100.0)/100.0;
+
+        // let mut data = String::<32>::new();
+        // write!(data, "1:{previous_index}, 2:{new_index}, 3:{t1}, 4:{t2}, 5:{tinph}").unwrap();
+        // trace(data);
+
         // if moving us on this frame would put us into a wall, just revert it
-        if  point_in_horizonal_wall(self.player_x, self.player_y, &self.horizontal_walls) ||
-            point_in_vertical_wall(self.player_x, self.player_y, &self.vertical_walls)
+        if (
+            (self.player_x <= 0.0) ||
+            (self.player_y <= 0.0) ||
+            (self.player_x as usize >= WIDTH) ||
+            (self.player_y as usize >= HEIGHT)
+        ) ||
+        (
+            (previous_index != new_index) && 
+            there_is_no_passage_here(previous_index, new_index, &self.passages)
+        )
         {
-            // (self.player_x, self.player_y) = previous_position;
+            (self.player_x, self.player_y) = previous_position;
         }
     }
 
