@@ -89,7 +89,7 @@ impl State {
     }
 
     /// move the character
-    pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool) {
+    pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool, one: bool, two: bool) {
         // store our current position in case we might need it later
         let previous_position = (self.player_x, self.player_y);
         let previous_index = get_index(self.player_x, self.player_y, WIDTH, HEIGHT);
@@ -123,18 +123,20 @@ impl State {
         // write!(data, "1:{previous_index}, 2:{new_index}, 3:{t1}, 4:{t2}, 5:{tinph}").unwrap();
         // trace(data);
 
-        // if moving us on this frame would put us into a wall, just revert it
-        if (
+        if one { trace("Button 1 pressed"); }
+        if two { trace("Button 2 pressed"); }
+
+        if ( // If move would cause player to leave the maze...
             (self.player_x <= 0.0) ||
             (self.player_y <= 0.0) ||
             (self.player_x as usize >= WIDTH) ||
             (self.player_y as usize >= HEIGHT)
         ) ||
-        (
+        ( // ...or if they would go through a wall...
             (previous_index != new_index) && 
             there_is_no_passage_here(previous_index, new_index, &self.passages)
         )
-        {
+        { // ... undo the move.
             (self.player_x, self.player_y) = previous_position;
         }
     }

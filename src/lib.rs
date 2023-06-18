@@ -6,19 +6,16 @@
 mod state;
 mod wasm4;
 
+use wasm4::{
+    DRAW_COLORS,
+    GAMEPAD1,
+    BUTTON_UP, BUTTON_DOWN,
+    BUTTON_LEFT, BUTTON_RIGHT,
+    BUTTON_1, BUTTON_2,
+    vline
+};
+
 use state::State;
-
-const DRAW_COLORS: *mut u16 = 0x14 as *mut u16;
-const GAMEPAD1: *const u8 = 0x16 as *const u8;
-
-const BUTTON_LEFT: u8 = 16;
-const BUTTON_RIGHT: u8 = 32;
-const BUTTON_UP: u8 = 64;
-const BUTTON_DOWN: u8 = 128;
-
-extern "C" {
-    fn vline(x: i32, y: i32, len: u32);
-}
 
 static mut STATE: State = State::new();
 
@@ -34,6 +31,8 @@ unsafe fn update() {
         *GAMEPAD1 & BUTTON_DOWN != 0,
         *GAMEPAD1 & BUTTON_LEFT != 0,
         *GAMEPAD1 & BUTTON_RIGHT != 0,
+        *GAMEPAD1 & BUTTON_1 != 0,
+        *GAMEPAD1 & BUTTON_2 != 0
     );
 
     // Go through each column on screen and draw walls in the center.
