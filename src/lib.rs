@@ -18,6 +18,7 @@ use wasm4::{
 use state::State;
 
 static mut STATE: State = State::new();
+static mut PREVIOUS_GAMEPAD: u8 = 0;
 
 #[no_mangle]
 unsafe fn start() {
@@ -31,12 +32,12 @@ unsafe fn update() {
         *GAMEPAD1 & BUTTON_DOWN != 0,
         *GAMEPAD1 & BUTTON_LEFT != 0,
         *GAMEPAD1 & BUTTON_RIGHT != 0,
-        *GAMEPAD1 & BUTTON_1 != 0,
+        *GAMEPAD1 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD) & BUTTON_1 != 0,
         *GAMEPAD1 & BUTTON_2 != 0
     );
 
     // Go through each column on screen and draw walls in the center.
-    for (x, wall) in STATE.get_view().iter().enumerate() {
+    for (x, wall) in STATE.get_walls().iter().enumerate() {
         let (height, shadow) = wall;
 
         if *shadow {
@@ -49,6 +50,8 @@ unsafe fn update() {
 
         vline(x as i32, 80 - (height / 2), *height as u32);
     }
+
+    PREVIOUS_GAMEPAD = *GAMEPAD1;
 }
 
 

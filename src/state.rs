@@ -20,6 +20,9 @@ const FOV: f32 = PI / 2.7; // The player's field of view.
 const HALF_FOV: f32 = FOV * 0.5; // Half the player's field of view.
 const ANGLE_STEP: f32 = FOV / 160.0; // The angle between each ray.
 const WALL_HEIGHT: f32 = 80.0; // A magic number.
+const STEP_SIZE: f32 = 0.045;
+
+const NUM_BULLETS: usize = 3;
 
 fn distance(a: f32, b: f32) -> f32 {
     sqrtf((a * a) + (b * b))
@@ -43,17 +46,22 @@ fn point_in_vertical_wall(x: f32, y: f32, vertical_walls: &Vec<u16,{WIDTH+1}>) -
     }
 }
 
+pub enum BULLET {
+    LOADED,
+    INFLIGHT,
+    SPENT
+}
+
 pub struct State {
     pub player_x: f32,
     pub player_y: f32,
     pub player_angle: f32,
+    pub bullets: Vec<BULLET,NUM_BULLETS>,
     visited: Vec<bool,NUM_CELLS>,
     passages: Vec<(usize,usize),MAX_PASSAGES>,
     pub horizontal_walls: Vec<u16,{HEIGHT+1}>,
     pub vertical_walls: Vec<u16,{WIDTH+1}>
 }
-
-const STEP_SIZE: f32 = 0.045;
 
 impl State {
 
@@ -62,6 +70,7 @@ impl State {
             player_x: 0.5,
             player_y: 0.5,
             player_angle: 0.0,
+            bullets: Vec::<BULLET,NUM_BULLETS>::new(),
             visited: Vec::<bool,NUM_CELLS>::new(),
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
             horizontal_walls: Vec::<u16,{HEIGHT+1}>::new(),
@@ -139,6 +148,43 @@ impl State {
         { // ... undo the move.
             (self.player_x, self.player_y) = previous_position;
         }
+    }
+
+    /// Returns 160 wall heights and their "color" from the player's perspective.
+    pub fn get_walls(&self) -> [(i32, bool); 160] {
+        // The player's FOV is split in half by their viewing angle.
+        // In order to get the ray's starting angle we must
+        // add half the FOV to the player's angle to get
+        // the edge of the player's FOV.
+        let starting_angle = self.player_angle + HALF_FOV;
+
+        let mut walls = [(0, false); 160];
+
+        for (idx, wall) in walls.iter_mut().enumerate() {
+            // `idx` is what number ray we are, `wall` is
+            // a mutable reference to a value in `walls`.
+            let angle = starting_angle - idx as f32 * ANGLE_STEP;
+
+            // Get both the closest horizontal and vertical wall
+            // intersections for this angle.
+            let h_dist = self.horizontal_intersection(angle);
+            let v_dist = self.vertical_intersection(angle);
+
+            let (min_dist, shadow) = if h_dist < v_dist {
+                (h_dist, false)
+            } else {
+                (v_dist, true)
+            };
+
+            // Get the minimum of the two distances and
+            // "convert" it into a wall height.
+            *wall = (
+                (WALL_HEIGHT / (min_dist * cosf(angle - self.player_angle))) as i32,
+                shadow,
+            );
+        }
+
+        walls
     }
 
     /// Returns the nearest wall the ray intersects with on a horizontal grid line.
@@ -258,42 +304,5 @@ impl State {
 
         // return the distance from next_x and next_y to the player.
         distance(next_x, next_y)
-    }
-
-    /// Returns 160 wall heights and their "color" from the player's perspective.
-    pub fn get_view(&self) -> [(i32, bool); 160] {
-        // The player's FOV is split in half by their viewing angle.
-        // In order to get the ray's starting angle we must
-        // add half the FOV to the player's angle to get
-        // the edge of the player's FOV.
-        let starting_angle = self.player_angle + HALF_FOV;
-
-        let mut walls = [(0, false); 160];
-
-        for (idx, wall) in walls.iter_mut().enumerate() {
-            // `idx` is what number ray we are, `wall` is
-            // a mutable reference to a value in `walls`.
-            let angle = starting_angle - idx as f32 * ANGLE_STEP;
-
-            // Get both the closest horizontal and vertical wall
-            // intersections for this angle.
-            let h_dist = self.horizontal_intersection(angle);
-            let v_dist = self.vertical_intersection(angle);
-
-            let (min_dist, shadow) = if h_dist < v_dist {
-                (h_dist, false)
-            } else {
-                (v_dist, true)
-            };
-
-            // Get the minimum of the two distances and
-            // "convert" it into a wall height.
-            *wall = (
-                (WALL_HEIGHT / (min_dist * cosf(angle - self.player_angle))) as i32,
-                shadow,
-            );
-        }
-
-        walls
     }
 }
