@@ -23,7 +23,9 @@ const WALL_HEIGHT: f32 = 80.0; // A magic number.
 const STEP_SIZE: f32 = 0.045;
 
 const NUM_BULLETS: usize = 3;
+const RELOAD_TIME: u8 = 255;
 
+// TODO: Move to util.rs
 fn distance(a: f32, b: f32) -> f32 {
     sqrtf((a * a) + (b * b))
 }
@@ -32,6 +34,7 @@ fn get_index(x: f32, y: f32, width: usize, height: usize) -> usize {
     (x as usize) + (y as usize) * width
 }
 
+// TODO: Combine these into one generic function
 fn point_in_horizonal_wall(x: f32, y: f32, horizontal_walls: &Vec<u16,{HEIGHT+1}>) -> bool {
     match horizontal_walls.get(y as usize) {
         Some(line) => (line & (0b1 << x as usize)) != 0,
@@ -46,17 +49,18 @@ fn point_in_vertical_wall(x: f32, y: f32, vertical_walls: &Vec<u16,{WIDTH+1}>) -
     }
 }
 
+// TODO: Move to bullet.rs
+#[derive(Clone, Copy, PartialEq)]
 pub enum BULLET {
     LOADED,
-    INFLIGHT,
-    SPENT
+    RELOADING(u8)
 }
 
 pub struct State {
     pub player_x: f32,
     pub player_y: f32,
     pub player_angle: f32,
-    pub bullets: Vec<BULLET,NUM_BULLETS>,
+    pub bullets: [BULLET;NUM_BULLETS],
     visited: Vec<bool,NUM_CELLS>,
     passages: Vec<(usize,usize),MAX_PASSAGES>,
     pub horizontal_walls: Vec<u16,{HEIGHT+1}>,
@@ -70,7 +74,7 @@ impl State {
             player_x: 0.5,
             player_y: 0.5,
             player_angle: 0.0,
-            bullets: Vec::<BULLET,NUM_BULLETS>::new(),
+            bullets: [BULLET::LOADED;NUM_BULLETS],
             visited: Vec::<bool,NUM_CELLS>::new(),
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
             horizontal_walls: Vec::<u16,{HEIGHT+1}>::new(),
@@ -132,7 +136,14 @@ impl State {
         // write!(data, "1:{previous_index}, 2:{new_index}, 3:{t1}, 4:{t2}, 5:{tinph}").unwrap();
         // trace(data);
 
-        if one { trace("Button 1 pressed"); }
+        if one { 
+            trace("Button 1 pressed");
+            match self.bullets.iter_mut().find(|&&mut b| b == BULLET::LOADED) {
+                Some(mut bullet) => *bullet = BULLET::RELOADING(RELOAD_TIME),
+                None => trace("Empty")
+            }
+        }
+
         if two { trace("Button 2 pressed"); }
 
         if ( // If move would cause player to leave the maze...
