@@ -15,6 +15,9 @@ use crate::wasm4::{
 
 use maze_gen::{find_passages, find_walls, there_is_no_passage_here};
 
+mod arms;
+use arms::{Ammo, Bullet};
+
 const WIDTH: usize = 13; // number of horizontal cells in maze
 const HEIGHT: usize = 13; // number of vertical cells in maze
 const NUM_CELLS: usize = WIDTH * HEIGHT;
@@ -53,18 +56,12 @@ fn point_in_vertical_wall(x: f32, y: f32, vertical_walls: &Vec<u16,{WIDTH+1}>) -
     }
 }
 
-// TODO: Move to bullet.rs
-#[derive(Clone, Copy, PartialEq)]
-pub enum Bullet {
-    Loaded,
-    Reloading(u8)
-}
-
 pub struct State {
     pub player_x: f32,
     pub player_y: f32,
     pub player_angle: f32,
-    pub player_bullets: [Bullet;NUM_BULLETS],
+    pub player_ammo: [Ammo;NUM_BULLETS],
+    pub bullets: Vec<Bullet,NUM_BULLETS>,
     visited: Vec<bool,NUM_CELLS>,
     passages: Vec<(usize,usize),MAX_PASSAGES>,
     pub horizontal_walls: Vec<u16,{HEIGHT+1}>,
@@ -78,7 +75,8 @@ impl State {
             player_x: 0.5,
             player_y: 0.5,
             player_angle: 0.0,
-            player_bullets: [Bullet::Loaded;NUM_BULLETS],
+            player_ammo: [Ammo::Loaded;NUM_BULLETS],
+            bullets: Vec::<Bullet,NUM_BULLETS>::new(),
             visited: Vec::<bool,NUM_CELLS>::new(),
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
             horizontal_walls: Vec::<u16,{HEIGHT+1}>::new(),
@@ -141,27 +139,37 @@ impl State {
         // trace(data);
 
         if shoot || spray { 
-            // Find the first loaded bullet
-            match self.player_bullets.iter_mut().find(|&&mut b| b == Bullet::Loaded) {
-                Some(mut bullet) => {
+            // Find the first loaded ammo
+            match self.player_ammo.iter_mut().find(|&&mut a| a == Ammo::Loaded) {
+                Some(mut ammo) => {
                     // Change it to reloading
-                    *bullet = Bullet::Reloading(RELOAD_TIME);
+                    *ammo = Ammo::Reloading(RELOAD_TIME);
                     trace("Shot bullet");
                     tone(1000 | (10 << 16),10,100,TONE_NOISE);
+                    match self.bullets.push(
+                        Bullet::new(
+                            self.player_x,
+                            self.player_y,
+                            self.player_angle
+                        )
+                    ) {
+                        Ok(()) => {},
+                        Err(bullet) => trace("Reached max number of bullets in the air.")
+                    }
                 },
                 None => trace("Empty")
             }
         }
 
-        // Find the first bullet that is not loaded
-        match self.player_bullets.iter_mut().find(|&&mut b| b != Bullet::Loaded) {
-            Some(mut bullet) => match bullet {
+        // Find the first ammo that is not loaded
+        match self.player_ammo.iter_mut().find(|&&mut a| a != Ammo::Loaded) {
+            Some(mut ammo) => match ammo {
                 // Decrement time to reload until we reach 0 (means we are loaded)
-                Bullet::Reloading(time_to_reload) => {
+                Ammo::Reloading(time_to_reload) => {
                     if *time_to_reload > 0 {
-                        *bullet = Bullet::Reloading(*time_to_reload-1);
+                        *ammo = Ammo::Reloading(*time_to_reload-1);
                     } else {
-                        *bullet = Bullet::Loaded;
+                        *ammo = Ammo::Loaded;
                         trace("Loaded!");
                         tone(50 | (150 << 16),50,100,TONE_NOISE);
                     }
