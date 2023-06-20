@@ -51,16 +51,16 @@ fn point_in_vertical_wall(x: f32, y: f32, vertical_walls: &Vec<u16,{WIDTH+1}>) -
 
 // TODO: Move to bullet.rs
 #[derive(Clone, Copy, PartialEq)]
-pub enum BULLET {
-    LOADED,
-    RELOADING(u8)
+pub enum Bullet {
+    Loaded,
+    Reloading(u8)
 }
 
 pub struct State {
     pub player_x: f32,
     pub player_y: f32,
     pub player_angle: f32,
-    pub bullets: [BULLET;NUM_BULLETS],
+    pub bullets: [Bullet;NUM_BULLETS],
     visited: Vec<bool,NUM_CELLS>,
     passages: Vec<(usize,usize),MAX_PASSAGES>,
     pub horizontal_walls: Vec<u16,{HEIGHT+1}>,
@@ -74,7 +74,7 @@ impl State {
             player_x: 0.5,
             player_y: 0.5,
             player_angle: 0.0,
-            bullets: [BULLET::LOADED;NUM_BULLETS],
+            bullets: [Bullet::Loaded;NUM_BULLETS],
             visited: Vec::<bool,NUM_CELLS>::new(),
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
             horizontal_walls: Vec::<u16,{HEIGHT+1}>::new(),
@@ -102,7 +102,7 @@ impl State {
     }
 
     /// move the character
-    pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool, one: bool, two: bool) {
+    pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool, shoot: bool, spray: bool) {
         // store our current position in case we might need it later
         let previous_position = (self.player_x, self.player_y);
         let previous_index = get_index(self.player_x, self.player_y, WIDTH, HEIGHT);
@@ -136,15 +136,34 @@ impl State {
         // write!(data, "1:{previous_index}, 2:{new_index}, 3:{t1}, 4:{t2}, 5:{tinph}").unwrap();
         // trace(data);
 
-        if one { 
-            trace("Button 1 pressed");
-            match self.bullets.iter_mut().find(|&&mut b| b == BULLET::LOADED) {
-                Some(mut bullet) => *bullet = BULLET::RELOADING(RELOAD_TIME),
+        if shoot || spray { 
+            // Find the first loaded bullet
+            match self.bullets.iter_mut().find(|&&mut b| b == Bullet::Loaded) {
+                Some(mut bullet) => {
+                    // Change it to reloading
+                    *bullet = Bullet::Reloading(RELOAD_TIME);
+                    trace("Shot bullet");
+                },
                 None => trace("Empty")
             }
         }
 
-        if two { trace("Button 2 pressed"); }
+        // Find the first bullet that is not loaded
+        match self.bullets.iter_mut().find(|&&mut b| b != Bullet::Loaded) {
+            Some(mut bullet) => match bullet {
+                // Decrement time to reload until we reach 0 (means we are loaded)
+                Bullet::Reloading(time_to_reload) => {
+                    if *time_to_reload > 0 {
+                        *bullet = Bullet::Reloading(*time_to_reload-1);
+                    } else {
+                        *bullet = Bullet::Loaded;
+                        trace("Loaded!");
+                    }
+                }
+                _ => {}
+            },
+            None => {}
+        }
 
         if ( // If move would cause player to leave the maze...
             (self.player_x <= 0.0) ||
