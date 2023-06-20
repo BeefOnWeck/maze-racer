@@ -7,7 +7,11 @@ use rand::rngs::SmallRng;
 use core::fmt::Write;
 use heapless::{String,Vec};
 
-use crate::wasm4::trace;
+use crate::wasm4::{
+    tone,
+    TONE_NOISE,
+    trace
+};
 
 use maze_gen::{find_passages, find_walls, there_is_no_passage_here};
 
@@ -60,7 +64,7 @@ pub struct State {
     pub player_x: f32,
     pub player_y: f32,
     pub player_angle: f32,
-    pub bullets: [Bullet;NUM_BULLETS],
+    pub player_bullets: [Bullet;NUM_BULLETS],
     visited: Vec<bool,NUM_CELLS>,
     passages: Vec<(usize,usize),MAX_PASSAGES>,
     pub horizontal_walls: Vec<u16,{HEIGHT+1}>,
@@ -74,7 +78,7 @@ impl State {
             player_x: 0.5,
             player_y: 0.5,
             player_angle: 0.0,
-            bullets: [Bullet::Loaded;NUM_BULLETS],
+            player_bullets: [Bullet::Loaded;NUM_BULLETS],
             visited: Vec::<bool,NUM_CELLS>::new(),
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
             horizontal_walls: Vec::<u16,{HEIGHT+1}>::new(),
@@ -138,18 +142,19 @@ impl State {
 
         if shoot || spray { 
             // Find the first loaded bullet
-            match self.bullets.iter_mut().find(|&&mut b| b == Bullet::Loaded) {
+            match self.player_bullets.iter_mut().find(|&&mut b| b == Bullet::Loaded) {
                 Some(mut bullet) => {
                     // Change it to reloading
                     *bullet = Bullet::Reloading(RELOAD_TIME);
                     trace("Shot bullet");
+                    tone(1000 | (10 << 16),10,100,TONE_NOISE);
                 },
                 None => trace("Empty")
             }
         }
 
         // Find the first bullet that is not loaded
-        match self.bullets.iter_mut().find(|&&mut b| b != Bullet::Loaded) {
+        match self.player_bullets.iter_mut().find(|&&mut b| b != Bullet::Loaded) {
             Some(mut bullet) => match bullet {
                 // Decrement time to reload until we reach 0 (means we are loaded)
                 Bullet::Reloading(time_to_reload) => {
@@ -158,6 +163,7 @@ impl State {
                     } else {
                         *bullet = Bullet::Loaded;
                         trace("Loaded!");
+                        tone(50 | (150 << 16),50,100,TONE_NOISE);
                     }
                 }
                 _ => {}
