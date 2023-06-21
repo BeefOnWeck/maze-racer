@@ -2,3 +2,4 @@
 /Cargo.lock
 fly.toml
 *.html
+.vscode

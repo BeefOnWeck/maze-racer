@@ -1,4 +1,4 @@
-use libm::{ceilf, cosf, fabsf, floorf, sinf, sqrtf, tanf, roundf};
+use libm::{ceilf, cosf, fabsf, floorf, sinf, tanf};
 use core::f32::consts::{PI, FRAC_PI_2};
 
 use rand::SeedableRng;
@@ -18,6 +18,9 @@ use maze_gen::{find_passages, find_walls, there_is_no_passage_here};
 mod arms;
 use arms::{Ammo, Bullet};
 
+mod util;
+use util::{distance, get_index, point_in_wall};
+
 const WIDTH: usize = 13; // number of horizontal cells in maze
 const HEIGHT: usize = 13; // number of vertical cells in maze
 const NUM_CELLS: usize = WIDTH * HEIGHT;
@@ -31,30 +34,6 @@ const STEP_SIZE: f32 = 0.045;
 
 const NUM_BULLETS: usize = 3;
 const RELOAD_TIME: u8 = 255;
-
-// TODO: Move to util.rs
-fn distance(a: f32, b: f32) -> f32 {
-    sqrtf((a * a) + (b * b))
-}
-
-fn get_index(x: f32, y: f32, width: usize, height: usize) -> usize {
-    (x as usize) + (y as usize) * width
-}
-
-// TODO: Combine these into one generic function
-fn point_in_horizonal_wall(x: f32, y: f32, horizontal_walls: &Vec<u16,{HEIGHT+1}>) -> bool {
-    match horizontal_walls.get(y as usize) {
-        Some(line) => (line & (0b1 << x as usize)) != 0,
-        None => true
-    }
-}
-
-fn point_in_vertical_wall(x: f32, y: f32, vertical_walls: &Vec<u16,{WIDTH+1}>) -> bool {
-    match vertical_walls.get(x as usize) {
-        Some(line) => (line & (0b1 << y as usize)) != 0,
-        None => true
-    }
-}
 
 pub struct State {
     pub player_x: f32,
@@ -105,6 +84,24 @@ impl State {
 
     /// move the character
     pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool, shoot: bool, spray: bool) {
+
+        self.update_player(up, down, left, right);
+
+        self.update_ammo(shoot, spray);
+
+        // let tinph = there_is_no_passage_here(previous_index, new_index, &self.passages);
+        // let t1 = roundf(self.player_x*100.0)/100.0;
+        // let t2 = roundf(self.player_y*100.0)/100.0;
+
+        // let mut data = String::<32>::new();
+        // write!(data, "1:{previous_index}, 2:{new_index}, 3:{t1}, 4:{t2}, 5:{tinph}").unwrap();
+        // trace(data);
+
+        
+    }
+
+    fn update_player(&mut self, up: bool, down: bool, left: bool, right: bool) {
+
         // store our current position in case we might need it later
         let previous_position = (self.player_x, self.player_y);
         let previous_index = get_index(self.player_x, self.player_y, WIDTH, HEIGHT);
@@ -130,13 +127,22 @@ impl State {
 
         let new_index = get_index(self.player_x, self.player_y, WIDTH, HEIGHT);
 
-        // let tinph = there_is_no_passage_here(previous_index, new_index, &self.passages);
-        // let t1 = roundf(self.player_x*100.0)/100.0;
-        // let t2 = roundf(self.player_y*100.0)/100.0;
+        if ( // If move would cause player to leave the maze...
+            (self.player_x <= 0.0) ||
+            (self.player_y <= 0.0) ||
+            (self.player_x as usize >= WIDTH) ||
+            (self.player_y as usize >= HEIGHT)
+        ) ||
+        ( // ...or if they would go through a wall...
+            (previous_index != new_index) && 
+            there_is_no_passage_here(previous_index, new_index, &self.passages)
+        )
+        { // ... undo the move.
+            (self.player_x, self.player_y) = previous_position;
+        }
+    }
 
-        // let mut data = String::<32>::new();
-        // write!(data, "1:{previous_index}, 2:{new_index}, 3:{t1}, 4:{t2}, 5:{tinph}").unwrap();
-        // trace(data);
+    fn update_ammo(&mut self, shoot: bool, spray: bool) {
 
         if shoot || spray { 
             // Find the first loaded ammo
@@ -145,16 +151,17 @@ impl State {
                     // Change it to reloading
                     *ammo = Ammo::Reloading(RELOAD_TIME);
                     trace("Shot bullet");
-                    tone(1000 | (10 << 16),10,100,TONE_NOISE);
-                    match self.bullets.push(
+                    tone(1000 | (10 << 16), 10, 100, TONE_NOISE);
+                    let attempt = self.bullets.push(
                         Bullet::new(
                             self.player_x,
                             self.player_y,
-                            self.player_angle
+                            self.player_angle // TODO: Add random jitter
                         )
-                    ) {
+                    );
+                    match attempt {
                         Ok(()) => {},
-                        Err(bullet) => trace("Reached max number of bullets in the air.")
+                        Err(_) => trace("Reached max number of bullets in the air.")
                     }
                 },
                 None => trace("Empty")
@@ -171,26 +178,12 @@ impl State {
                     } else {
                         *ammo = Ammo::Loaded;
                         trace("Loaded!");
-                        tone(50 | (150 << 16),50,100,TONE_NOISE);
+                        tone(50 | (150 << 16), 50, 100, TONE_NOISE);
                     }
                 }
                 _ => {}
             },
             None => {}
-        }
-
-        if ( // If move would cause player to leave the maze...
-            (self.player_x <= 0.0) ||
-            (self.player_y <= 0.0) ||
-            (self.player_x as usize >= WIDTH) ||
-            (self.player_y as usize >= HEIGHT)
-        ) ||
-        ( // ...or if they would go through a wall...
-            (previous_index != new_index) && 
-            there_is_no_passage_here(previous_index, new_index, &self.passages)
-        )
-        { // ... undo the move.
-            (self.player_x, self.player_y) = previous_position;
         }
     }
 
@@ -274,8 +267,7 @@ impl State {
                 next_y + self.player_y
             };
 
-            // Tell the loop to quit if we've just hit a wall.
-            if point_in_horizonal_wall(current_x, current_y, &self.horizontal_walls) {
+            if point_in_wall(current_y, current_x, &self.horizontal_walls) {
                 break;
             }
 
@@ -335,8 +327,7 @@ impl State {
             };
             let current_y = next_y + self.player_y;
 
-            // Tell the loop to quit if we've just hit a wall.
-            if point_in_vertical_wall(current_x, current_y, &self.vertical_walls) {
+            if point_in_wall(current_x, current_y, &self.vertical_walls) {
                 break;
             }
 
