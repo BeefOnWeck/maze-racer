@@ -5,19 +5,22 @@ pub enum Ammo {
     Reloading(u8)
 }
 
+#[derive(Clone, Copy, PartialEq)]
 pub struct Bullet {
     pub x: f32,
     pub y: f32,
-    pub angle: f32
+    pub angle: f32,
+    pub inflight: bool
 }
 
 impl Bullet {
 
-    pub fn new(x: f32, y: f32, angle: f32) -> Bullet {
+    pub fn new(x: f32, y: f32, angle: f32, inflight: bool) -> Bullet {
         Bullet {
             x,
             y,
-            angle
+            angle,
+            inflight
         }
     }
 }

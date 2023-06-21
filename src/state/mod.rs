@@ -34,6 +34,7 @@ const STEP_SIZE: f32 = 0.045;
 
 const NUM_BULLETS: usize = 3;
 const RELOAD_TIME: u8 = 255;
+const BULLET_SPEED: f32 = 0.01;
 
 pub struct State {
     pub player_x: f32,
@@ -82,51 +83,42 @@ impl State {
 
     }
 
-    /// move the character
+    /// Update the game state based on user input.
     pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool, shoot: bool, spray: bool) {
 
         self.update_player(up, down, left, right);
-
         self.update_ammo(shoot, spray);
+        self.update_bullets();
 
-        // let tinph = there_is_no_passage_here(previous_index, new_index, &self.passages);
-        // let t1 = roundf(self.player_x*100.0)/100.0;
-        // let t2 = roundf(self.player_y*100.0)/100.0;
-
-        // let mut data = String::<32>::new();
-        // write!(data, "1:{previous_index}, 2:{new_index}, 3:{t1}, 4:{t2}, 5:{tinph}").unwrap();
-        // trace(data);
-
-        
     }
 
+    /// Moves a player around based on user input.
     fn update_player(&mut self, up: bool, down: bool, left: bool, right: bool) {
-
-        // store our current position in case we might need it later
+        // Store the current position and index in case we need to undo a move.
         let previous_position = (self.player_x, self.player_y);
         let previous_index = get_index(self.player_x, self.player_y, WIDTH, HEIGHT);
 
+        // Tentative updates to player position and orientation.
         if up {
             self.player_x += cosf(self.player_angle) * STEP_SIZE;
             self.player_y += -sinf(self.player_angle) * STEP_SIZE;
         }
-
         if down {
             self.player_x -= cosf(self.player_angle) * STEP_SIZE;
             self.player_y -= -sinf(self.player_angle) * STEP_SIZE;
         }
-
         if right {
             self.player_angle -= STEP_SIZE;
 
         }
-
         if left {
             self.player_angle += STEP_SIZE;
         }
 
+        // If the player has moved to a new cell, then new_index will differ from previous_index.
         let new_index = get_index(self.player_x, self.player_y, WIDTH, HEIGHT);
 
+        // Conditionally undo the move.
         if ( // If move would cause player to leave the maze...
             (self.player_x <= 0.0) ||
             (self.player_y <= 0.0) ||
@@ -142,8 +134,13 @@ impl State {
         }
     }
 
+    /// Fires a bullet in response to player input; incrementally reloads spent ammo.
     fn update_ammo(&mut self, shoot: bool, spray: bool) {
-
+        // When the player presses either button.
+        // What's the difference between shoot and spray?
+        // The shoot button is debounced, so when it is pressed, only one bullet will fire.
+        // The spray button is "sticky." 
+        // This means that a single press will activate it for several frames, shooting all ammo.
         if shoot || spray { 
             // Find the first loaded ammo
             match self.player_ammo.iter_mut().find(|&&mut a| a == Ammo::Loaded) {
@@ -156,7 +153,8 @@ impl State {
                         Bullet::new(
                             self.player_x,
                             self.player_y,
-                            self.player_angle // TODO: Add random jitter
+                            self.player_angle, // TODO: Add random jitter
+                            true
                         )
                     );
                     match attempt {
@@ -168,7 +166,8 @@ impl State {
             }
         }
 
-        // Find the first ammo that is not loaded
+        // Find the first ammo that is not loaded and incrementally reload it.
+        // Spent ammo take RELOAD_TIME frames to reload and are reloaded one at a time.
         match self.player_ammo.iter_mut().find(|&&mut a| a != Ammo::Loaded) {
             Some(mut ammo) => match ammo {
                 // Decrement time to reload until we reach 0 (means we are loaded)
@@ -185,6 +184,29 @@ impl State {
             },
             None => {}
         }
+    }
+
+    fn update_bullets(&mut self) {
+
+        self.bullets.iter_mut().for_each(|b| {
+            let previous_index = get_index(b.x, b.y, WIDTH, HEIGHT);
+            b.x += cosf(b.angle) * BULLET_SPEED;
+            b.y += -sinf(b.angle) * BULLET_SPEED;
+            let new_index = get_index(b.x, b.y, WIDTH, HEIGHT);
+            if ( // If bullet leaves the maze...
+                b.x <= 0.0 || b.y <= 0.0 || b.x as usize >= WIDTH || b.y as usize >= HEIGHT
+            ) ||
+            ( // ...or if it would go through a wall...
+                (previous_index != new_index) && 
+                there_is_no_passage_here(previous_index, new_index, &self.passages)
+            )
+            { // ... mark inflight as false.
+                b.inflight = false;
+            }
+
+        });
+
+        self.bullets = self.bullets.iter().map(|b| *b).filter(|b| b.inflight == true).collect();
     }
 
     /// Returns 160 wall heights and their "color" from the player's perspective.
