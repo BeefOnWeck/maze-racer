@@ -5,6 +5,8 @@
 
 mod constants;
 mod state;
+mod util;
+mod view;
 mod wasm4;
 
 use wasm4::{
@@ -17,6 +19,8 @@ use wasm4::{
 };
 
 use state::State;
+
+use view::get_wall_view;
 
 static mut STATE: State = State::new();
 static mut PREVIOUS_GAMEPAD: u8 = 0;
@@ -37,8 +41,16 @@ unsafe fn update() {
         *GAMEPAD1 & BUTTON_2 != 0
     );
 
+    let walls = get_wall_view(
+        STATE.player_angle, 
+        STATE.player_x, 
+        STATE.player_y, 
+        &STATE.horizontal_walls, 
+        &STATE.vertical_walls
+    );
+
     // Go through each column on screen and draw walls in the center.
-    for (x, wall) in STATE.get_walls().iter().enumerate() {
+    for (x, wall) in walls.iter().enumerate() {
         let (height, shadow) = wall;
 
         if *shadow {
