@@ -3,6 +3,7 @@
 
 #![no_std]
 
+mod constants;
 mod state;
 mod wasm4;
 

@@ -7,6 +7,20 @@ use rand::rngs::SmallRng;
 use core::fmt::Write;
 use heapless::{String,Vec};
 
+use crate::constants::{
+    WIDTH,
+    HEIGHT,
+    NUM_CELLS,
+    MAX_PASSAGES,
+    STEP_SIZE,
+    BULLET_SPEED,
+    RELOAD_TIME,
+    NUM_BULLETS,
+    HALF_FOV,
+    ANGLE_STEP,
+    WALL_HEIGHT
+};
+
 use crate::wasm4::{
     tone,
     TONE_NOISE,
@@ -20,21 +34,6 @@ use arms::{Ammo, Bullet};
 
 mod util;
 use util::{distance, get_index, point_in_wall};
-
-const WIDTH: usize = 13; // number of horizontal cells in maze
-const HEIGHT: usize = 13; // number of vertical cells in maze
-const NUM_CELLS: usize = WIDTH * HEIGHT;
-const MAX_PASSAGES: usize = NUM_CELLS; // memory to reserve for maze
-
-const FOV: f32 = PI / 2.7; // The player's field of view.
-const HALF_FOV: f32 = FOV * 0.5; // Half the player's field of view.
-const ANGLE_STEP: f32 = FOV / 160.0; // The angle between each ray.
-const WALL_HEIGHT: f32 = 80.0; // A magic number.
-const STEP_SIZE: f32 = 0.045;
-
-const NUM_BULLETS: usize = 3;
-const RELOAD_TIME: u8 = 255;
-const BULLET_SPEED: f32 = 0.01;
 
 pub struct State {
     pub player_x: f32,
@@ -186,8 +185,9 @@ impl State {
         }
     }
 
+    /// Propagates bullets in flight, removing them when they hit a wall.
     fn update_bullets(&mut self) {
-
+        // Update the position of each bullet in flight.
         self.bullets.iter_mut().for_each(|b| {
             let previous_index = get_index(b.x, b.y, WIDTH, HEIGHT);
             b.x += cosf(b.angle) * BULLET_SPEED;
@@ -202,10 +202,14 @@ impl State {
             )
             { // ... mark inflight as false.
                 b.inflight = false;
+                trace("Bullet done");
             }
 
         });
 
+        // TODO: Player collision detection.
+
+        // Remove bullets that are no longer inflight.
         self.bullets = self.bullets.iter().map(|b| *b).filter(|b| b.inflight == true).collect();
     }
 
