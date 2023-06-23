@@ -76,7 +76,7 @@ unsafe fn update() {
     for bullet in bullets.iter() {
         let (x_position, size, inflight) = bullet;
         if *inflight {
-            oval(*x_position, 75, 10, 10);
+            oval(*x_position, 75, *size, *size);
         }
     }
 

@@ -24,45 +24,24 @@ pub fn get_bullet_view(
     for (index, bullet) in bullets.iter().enumerate() {
         // Only consider bullets that are still inflight
         if bullet.inflight {
-            // Calculate angle of bullet
+            // Calculate angle and distance of bullet
             let rise = bullet.y - player_y;
             let run = bullet.x - player_x;
-            let bullet_angle = atan2f(rise, run);
-
-            
-
-            // let mut data = String::<32>::new();
-            // let bullet_y = bullet.y;
-            // write!(data, "bullet y:{bullet_y}").unwrap();
-            // trace(data);
-
-            // let mut data = String::<32>::new();
-            // write!(data, "rise:{rise}").unwrap();
-            // trace(data);
-
-            // let mut data = String::<32>::new();
-            // write!(data, "run:{run}").unwrap();
-            // trace(data);
-
-            let mut data = String::<32>::new();
-            write!(data, "bullet angle:{bullet_angle}").unwrap();
-            trace(data);
+            let bullet_angle = -1.0 * atan2f(rise, run);
+            let bullet_distance = distance(rise, run);
 
             // Check if the angle falls in the FOV
             if bullet_angle >= fov_lower_limit && bullet_angle <= fov_upper_limit {
-
-                let mut data = String::<32>::new();
-                write!(data, "fov_lower_limit:{fov_lower_limit}").unwrap();
-                trace(data);
-
                 // Determine where the FOV the bullet falls
                 let x_position = ((fov_upper_limit - bullet_angle) / ANGLE_STEP) as i32;
 
+                // Determine how large the bullet should appear
+                let size = (0.1 / bullet_distance / ANGLE_STEP) as u32;
                 let mut data = String::<32>::new();
-                write!(data, "x_position:{x_position}").unwrap();
+                write!(data, "size:{size}").unwrap();
                 trace(data);
                 
-                ovals[index] = (x_position, 10, true);
+                ovals[index] = (x_position, size, true);
             }
         }
     }
