@@ -8,6 +8,7 @@ mod state;
 mod util;
 mod view;
 mod wasm4;
+mod arms;
 
 use wasm4::{
     DRAW_COLORS,
@@ -15,12 +16,12 @@ use wasm4::{
     BUTTON_UP, BUTTON_DOWN,
     BUTTON_LEFT, BUTTON_RIGHT,
     BUTTON_1, BUTTON_2,
-    vline
+    vline, oval
 };
 
 use state::State;
 
-use view::get_wall_view;
+use view::{get_wall_view, get_bullet_view};
 
 static mut STATE: State = State::new();
 static mut PREVIOUS_GAMEPAD: u8 = 0;
@@ -49,6 +50,13 @@ unsafe fn update() {
         &STATE.vertical_walls
     );
 
+    let bullets = get_bullet_view(
+        STATE.player_angle, 
+        STATE.player_x, 
+        STATE.player_y,
+        &STATE.bullets
+    );
+
     // Go through each column on screen and draw walls in the center.
     for (x, wall) in walls.iter().enumerate() {
         let (height, shadow) = wall;
@@ -62,6 +70,14 @@ unsafe fn update() {
         }
 
         vline(x as i32, 80 - (height / 2), *height as u32);
+    }
+
+    *DRAW_COLORS = 0x04;
+    for bullet in bullets.iter() {
+        let (x_position, size, inflight) = bullet;
+        if *inflight {
+            oval(*x_position, 75, 10, 10);
+        }
     }
 
     PREVIOUS_GAMEPAD = *GAMEPAD1;

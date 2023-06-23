@@ -1,9 +1,74 @@
 use core::f32::consts::{PI, FRAC_PI_2};
-use libm::{ceilf, cosf, fabsf, floorf, sinf, tanf};
-use heapless::Vec;
+use libm::{ceilf, cosf, fabsf, floorf, sinf, tanf, atan2f};
+use heapless::{String,Vec};
+use core::fmt::Write;
 
-use crate::constants::{HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT};
+use crate::constants::{HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT, NUM_BULLETS};
 use crate::util::{distance, point_in_wall};
+use crate::arms::Bullet;
+use crate::wasm4::trace;
+
+pub fn get_bullet_view(
+    player_angle: f32,
+    player_x: f32,
+    player_y: f32,
+    bullets: &Vec<Bullet,NUM_BULLETS>
+) -> [(i32, u32, bool); NUM_BULLETS] {
+
+    let fov_upper_limit = player_angle + HALF_FOV;
+    let fov_lower_limit = fov_upper_limit - (159.0 * ANGLE_STEP);
+
+    // Each oval defined by: x position, size, and visibility flag
+    let mut ovals = [(0, 0, false); NUM_BULLETS];
+
+    for (index, bullet) in bullets.iter().enumerate() {
+        // Only consider bullets that are still inflight
+        if bullet.inflight {
+            // Calculate angle of bullet
+            let rise = bullet.y - player_y;
+            let run = bullet.x - player_x;
+            let bullet_angle = atan2f(rise, run);
+
+            
+
+            // let mut data = String::<32>::new();
+            // let bullet_y = bullet.y;
+            // write!(data, "bullet y:{bullet_y}").unwrap();
+            // trace(data);
+
+            // let mut data = String::<32>::new();
+            // write!(data, "rise:{rise}").unwrap();
+            // trace(data);
+
+            // let mut data = String::<32>::new();
+            // write!(data, "run:{run}").unwrap();
+            // trace(data);
+
+            let mut data = String::<32>::new();
+            write!(data, "bullet angle:{bullet_angle}").unwrap();
+            trace(data);
+
+            // Check if the angle falls in the FOV
+            if bullet_angle >= fov_lower_limit && bullet_angle <= fov_upper_limit {
+
+                let mut data = String::<32>::new();
+                write!(data, "fov_lower_limit:{fov_lower_limit}").unwrap();
+                trace(data);
+
+                // Determine where the FOV the bullet falls
+                let x_position = ((fov_upper_limit - bullet_angle) / ANGLE_STEP) as i32;
+
+                let mut data = String::<32>::new();
+                write!(data, "x_position:{x_position}").unwrap();
+                trace(data);
+                
+                ovals[index] = (x_position, 10, true);
+            }
+        }
+    }
+
+    return ovals;
+}
 
 /// Returns 160 wall heights and their "color" from the player's perspective.
 pub fn get_wall_view(
@@ -120,9 +185,6 @@ fn vertical_intersection(
     // This tells you if the angle is "facing up"
     // regardless of how big the angle is.
     let right = fabsf(floorf((angle - FRAC_PI_2) / PI) % 2.0) != 0.0;
-    // let mut data = String::<32>::new();
-    // write!(data, "Right:{right}").unwrap();
-    // trace(data);
 
     // first_y and first_x are the first grid intersections
     // that the ray intersects with.

@@ -19,9 +19,7 @@ use crate::wasm4::{
 };
 
 use maze_gen::{find_passages, find_walls, there_is_no_passage_here};
-
-mod arms;
-use arms::{Ammo, Bullet};
+use crate::arms::{Ammo, Bullet};
 
 use crate::util::{distance, get_index, point_in_wall};
 
