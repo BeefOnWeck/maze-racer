@@ -1,7 +1,7 @@
 use libm::{ceilf, cosf, fabsf, floorf, sinf, tanf};
 use core::f32::consts::{PI, FRAC_PI_2};
 
-use rand::SeedableRng;
+use rand::{SeedableRng, Rng};
 use rand::rngs::SmallRng;
 
 use core::fmt::Write;
@@ -32,7 +32,8 @@ pub struct State {
     visited: Vec<bool,NUM_CELLS>,
     passages: Vec<(usize,usize),MAX_PASSAGES>,
     pub horizontal_walls: Vec<u16,{HEIGHT+1}>,
-    pub vertical_walls: Vec<u16,{WIDTH+1}>
+    pub vertical_walls: Vec<u16,{WIDTH+1}>,
+    seed: u64
 }
 
 impl State {
@@ -47,15 +48,13 @@ impl State {
             visited: Vec::<bool,NUM_CELLS>::new(),
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
             horizontal_walls: Vec::<u16,{HEIGHT+1}>::new(),
-            vertical_walls: Vec::<u16,{WIDTH+1}>::new()
+            vertical_walls: Vec::<u16,{WIDTH+1}>::new(),
+            seed: 0
         }
     }
 
     /// Called from the game start(), this creates a random maze.
-    pub fn generate_maze(&mut self) {
-        // TODO: Replace this fixed seed with a random external one
-        let mut rng = SmallRng::seed_from_u64(11);
-
+    pub fn generate_maze(&mut self, rng: &mut SmallRng) {
         // Initialize an empty maze
         self.visited.extend_from_slice(&[false;NUM_CELLS]).unwrap();
         self.horizontal_walls.extend_from_slice(&[0b0000000000000000;{HEIGHT+1}]).unwrap();
@@ -63,14 +62,18 @@ impl State {
 
         // Randomly create passages to define the maze, starting from first index
         let index = 0;
-        find_passages(index, WIDTH, HEIGHT, &mut self.visited, &mut self.passages, &mut rng);
+        find_passages(index, WIDTH, HEIGHT, &mut self.visited, &mut self.passages, rng);
 
         // Use the passages to define the walls of the maze
         find_walls(WIDTH, HEIGHT, &mut self.passages, &mut self.horizontal_walls, &mut self.vertical_walls);
+
+        self.seed = rng.gen::<u64>();
     }
 
     /// Update the game state based on user input.
-    pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool, shoot: bool, spray: bool) {
+    pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool, 
+        shoot: bool, spray: bool) 
+    {
         self.update_player(up, down, left, right);
         self.update_ammo(shoot, spray);
         self.update_bullets();
@@ -132,11 +135,13 @@ impl State {
                     *ammo = Ammo::Reloading(RELOAD_TIME);
                     trace("Shot bullet");
                     tone(1000 | (10 << 16), 10, 100, TONE_NOISE);
+                    let mut rng = SmallRng::seed_from_u64(self.seed);
+                    self.seed = rng.gen::<u64>();
                     let attempt = self.bullets.push(
                         Bullet::new(
                             self.player_x,
                             self.player_y,
-                            self.player_angle, // TODO: Add random jitter
+                            self.player_angle + (rng.gen::<f32>() - 0.5)/10.0, // TODO: Add random jitter
                             true
                         )
                     );

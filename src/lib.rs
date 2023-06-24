@@ -10,6 +10,7 @@ mod view;
 mod wasm4;
 mod arms;
 
+use rand::{rngs::SmallRng, SeedableRng};
 use wasm4::{
     DRAW_COLORS,
     GAMEPAD1,
@@ -28,7 +29,8 @@ static mut PREVIOUS_GAMEPAD: u8 = 0;
 
 #[no_mangle]
 unsafe fn start() {
-    STATE.generate_maze();
+    let mut RNG = SmallRng::seed_from_u64(11);
+    STATE.generate_maze(&mut RNG);
 }
 
 #[no_mangle]
