@@ -27,19 +27,27 @@ pub fn get_bullet_view(
             // Calculate angle and distance of bullet
             let rise = bullet.y - player_y;
             let run = bullet.x - player_x;
-            let bullet_angle = -1.0 * atan2f(rise, run);
             let bullet_distance = distance(rise, run);
 
+            let bullet_angle = -1.0 * atan2f(rise, run);
+            let num_wraps = floorf((bullet_angle - player_angle)/(2.0 * PI));
+            let unwrapped = bullet_angle - 2.0 * PI * num_wraps;
+            let extra_unwrapped = unwrapped - 2.0 * PI;
+
+            let extra_is_closer = fabsf(player_angle - unwrapped) > fabsf(player_angle - extra_unwrapped);
+            let unwrapped_angle = if extra_is_closer {
+                extra_unwrapped
+            } else {
+                unwrapped
+            };
+
             // Check if the angle falls in the FOV
-            if bullet_angle >= fov_lower_limit && bullet_angle <= fov_upper_limit {
+            if unwrapped_angle >= fov_lower_limit && unwrapped_angle <= fov_upper_limit {
                 // Determine where the FOV the bullet falls
-                let x_position = ((fov_upper_limit - bullet_angle) / ANGLE_STEP) as i32;
+                let x_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32;
 
                 // Determine how large the bullet should appear
                 let size = (0.1 / bullet_distance / ANGLE_STEP) as u32;
-                let mut data = String::<32>::new();
-                write!(data, "size:{size}").unwrap();
-                trace(data);
                 
                 ovals[index] = (x_position, size, true);
             }

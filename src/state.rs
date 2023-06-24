@@ -93,7 +93,6 @@ impl State {
         }
         if right {
             self.player_angle -= STEP_SIZE;
-
         }
         if left {
             self.player_angle += STEP_SIZE;
