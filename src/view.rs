@@ -13,13 +13,13 @@ pub fn get_bullet_view(
     player_x: f32,
     player_y: f32,
     bullets: &Vec<Bullet,NUM_BULLETS>
-) -> [(i32, u32, bool); NUM_BULLETS] {
+) -> [(i32, i32, u32, bool); NUM_BULLETS] {
 
     let fov_upper_limit = player_angle + HALF_FOV;
     let fov_lower_limit = fov_upper_limit - (159.0 * ANGLE_STEP);
 
     // Each oval defined by: x position, size, and visibility flag
-    let mut ovals = [(0, 0, false); NUM_BULLETS];
+    let mut ovals = [(0, 0, 0, false); NUM_BULLETS];
 
     for (index, bullet) in bullets.iter().enumerate() {
         // Only consider bullets that are still inflight
@@ -44,12 +44,15 @@ pub fn get_bullet_view(
             // Check if the angle falls in the FOV
             if unwrapped_angle >= fov_lower_limit && unwrapped_angle <= fov_upper_limit {
                 // Determine where the FOV the bullet falls
-                let x_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32;
+                let h_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32;
 
                 // Determine how large the bullet should appear
                 let size = (0.1 / bullet_distance / ANGLE_STEP) as u32;
+
+                // Vertical correction for far bullets
+                let v_position = 75 + bullet_distance as i32;
                 
-                ovals[index] = (x_position, size, true);
+                ovals[index] = (h_position, v_position, size, true);
             }
         }
     }

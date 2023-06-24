@@ -76,9 +76,9 @@ unsafe fn update() {
 
     *DRAW_COLORS = 0x04;
     for bullet in bullets.iter() {
-        let (x_position, size, inflight) = bullet;
+        let (h_position, v_position, size, inflight) = bullet;
         if *inflight {
-            oval(*x_position, 75, *size, *size);
+            oval(*h_position, *v_position, *size, *size);
         }
     }
 
