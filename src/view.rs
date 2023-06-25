@@ -3,10 +3,27 @@ use libm::{ceilf, cosf, fabsf, floorf, sinf, tanf, atan2f};
 use heapless::{String,Vec};
 use core::fmt::Write;
 
-use crate::constants::{HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT, NUM_BULLETS};
+use crate::constants::{HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT, NUM_BULLETS, RELOAD_TIME};
 use crate::util::{distance, point_in_wall};
-use crate::arms::Bullet;
+use crate::arms::{Bullet, Ammo};
 use crate::wasm4::trace;
+
+pub fn get_ammo_view(player_ammo: [Ammo;NUM_BULLETS]) -> [u32; NUM_BULLETS] {
+
+    let mut circles: [u32; NUM_BULLETS] = [0; NUM_BULLETS];
+    for (index, ammo) in player_ammo.iter().enumerate() {
+        circles[index] = match ammo {
+            Ammo::Loaded => 8,
+            Ammo::Reloading(time_to_reload) => match time_to_reload {
+                201..=255 => 0,
+                151..=200 => 2,
+                50..=150 => 4,
+                _ => 6
+            }
+        };
+    }
+    return circles;
+}
 
 pub fn get_bullet_view(
     player_angle: f32,

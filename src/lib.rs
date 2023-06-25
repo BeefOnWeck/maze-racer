@@ -10,6 +10,8 @@ mod view;
 mod wasm4;
 mod arms;
 
+use core::arch::wasm32::i32x4_abs;
+
 use rand::{rngs::SmallRng, SeedableRng};
 use wasm4::{
     DRAW_COLORS,
@@ -22,7 +24,7 @@ use wasm4::{
 
 use state::State;
 
-use view::{get_wall_view, get_bullet_view};
+use view::{get_wall_view, get_bullet_view, get_ammo_view};
 
 static mut STATE: State = State::new();
 static mut PREVIOUS_GAMEPAD: u8 = 0;
@@ -59,6 +61,10 @@ unsafe fn update() {
         &STATE.bullets
     );
 
+    let ammo = get_ammo_view(
+        STATE.player_ammo
+    );
+
     // Go through each column on screen and draw walls in the center.
     for (x, wall) in walls.iter().enumerate() {
         let (height, shadow) = wall;
@@ -80,6 +86,25 @@ unsafe fn update() {
         if *inflight {
             oval(*h_position, *v_position, *size, *size);
         }
+    }
+
+    *DRAW_COLORS = 0x40;
+    oval(120, 4, 8, 8);
+    oval(130, 4, 8, 8);
+    oval(140, 4, 8, 8);
+
+    *DRAW_COLORS = 0x04;
+    if ammo[0] > 0 {
+        let correction: i32 = (8 - ammo[0] as i32)/2;
+        oval(120+correction, 4+correction, ammo[0], ammo[0]);
+    }
+    if ammo[1] > 0 {
+        let correction: i32 = (8 - ammo[1] as i32)/2;
+        oval(130+correction, 4+correction, ammo[1], ammo[1]);
+    }
+    if ammo[2] > 0 {
+        let correction: i32 = (8 - ammo[2] as i32)/2;
+        oval(140+correction, 4+correction, ammo[2], ammo[2]);
     }
 
     PREVIOUS_GAMEPAD = *GAMEPAD1;
