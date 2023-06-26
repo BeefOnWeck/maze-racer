@@ -1,4 +1,5 @@
 use core::f32::consts::{PI, FRAC_PI_2};
+use core::iter::zip;
 use libm::{ceilf, cosf, fabsf, floorf, sinf, tanf, atan2f};
 use heapless::{String,Vec};
 use core::fmt::Write;
@@ -8,11 +9,17 @@ use crate::util::{distance, point_in_wall};
 use crate::arms::{Bullet, Ammo};
 use crate::wasm4::trace;
 
-pub fn get_ammo_view(player_ammo: [Ammo;NUM_BULLETS]) -> [u32; NUM_BULLETS] {
+pub fn get_ammo_view(player_ammo: [Ammo;NUM_BULLETS]) -> [(i32, i32, u32, i32, u32); NUM_BULLETS] {
 
-    let mut circles: [u32; NUM_BULLETS] = [0; NUM_BULLETS];
+    let mut ammo_dashboard: [(i32, i32, u32, i32, u32); NUM_BULLETS] = [
+        (120, 4, 8, 0, 0),
+        (130, 4, 8, 0, 0),
+        (140, 4, 8, 0, 0)
+    ];
+
+    let mut status: [u32; NUM_BULLETS] = [0; NUM_BULLETS];
     for (index, ammo) in player_ammo.iter().enumerate() {
-        circles[index] = match ammo {
+        let status = match ammo {
             Ammo::Loaded => 8,
             Ammo::Reloading(time_to_reload) => match time_to_reload {
                 201..=255 => 0,
@@ -21,8 +28,13 @@ pub fn get_ammo_view(player_ammo: [Ammo;NUM_BULLETS]) -> [u32; NUM_BULLETS] {
                 _ => 6
             }
         };
+        let correction = (8 - status as i32) / 2;
+        ammo_dashboard[index].3 = correction;
+        ammo_dashboard[index].4 = status;
     }
-    return circles;
+    
+    return ammo_dashboard;
+
 }
 
 pub fn get_bullet_view(

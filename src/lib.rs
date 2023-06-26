@@ -61,7 +61,7 @@ unsafe fn update() {
         &STATE.bullets
     );
 
-    let ammo = get_ammo_view(
+    let ammunition = get_ammo_view(
         STATE.player_ammo
     );
 
@@ -89,22 +89,17 @@ unsafe fn update() {
     }
 
     *DRAW_COLORS = 0x40;
-    oval(120, 4, 8, 8);
-    oval(130, 4, 8, 8);
-    oval(140, 4, 8, 8);
+    for ammo in ammunition.iter() {
+        let (x, y, size, _, _) = *ammo;
+        oval(x, y, size, size);
+    }
 
     *DRAW_COLORS = 0x04;
-    if ammo[0] > 0 {
-        let correction: i32 = (8 - ammo[0] as i32)/2;
-        oval(120+correction, 4+correction, ammo[0], ammo[0]);
-    }
-    if ammo[1] > 0 {
-        let correction: i32 = (8 - ammo[1] as i32)/2;
-        oval(130+correction, 4+correction, ammo[1], ammo[1]);
-    }
-    if ammo[2] > 0 {
-        let correction: i32 = (8 - ammo[2] as i32)/2;
-        oval(140+correction, 4+correction, ammo[2], ammo[2]);
+    for ammo in ammunition.iter() {
+        let (x, y, _, fix, fill) = *ammo;
+        if fill > 0 {
+            oval(x+fix, y+fix, fill, fill);
+        }
     }
 
     PREVIOUS_GAMEPAD = *GAMEPAD1;
