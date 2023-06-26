@@ -1,23 +1,22 @@
 use core::f32::consts::{PI, FRAC_PI_2};
-use core::iter::zip;
 use libm::{ceilf, cosf, fabsf, floorf, sinf, tanf, atan2f};
 use heapless::{String,Vec};
 use core::fmt::Write;
 
-use crate::constants::{HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT, NUM_BULLETS, RELOAD_TIME};
+use crate::constants::{HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT, NUM_BULLETS, RELOAD_TIME, BULLETS_PER_PLAYER};
 use crate::util::{distance, point_in_wall};
 use crate::arms::{Bullet, Ammo};
 use crate::wasm4::trace;
 
-pub fn get_ammo_view(player_ammo: [Ammo;NUM_BULLETS]) -> [(i32, i32, u32, i32, u32); NUM_BULLETS] {
+pub fn get_ammo_view(player_ammo: [Ammo; BULLETS_PER_PLAYER]) -> [(i32, i32, u32, i32, u32); BULLETS_PER_PLAYER] {
 
-    let mut ammo_dashboard: [(i32, i32, u32, i32, u32); NUM_BULLETS] = [
+    let mut ammo_dashboard: [(i32, i32, u32, i32, u32); BULLETS_PER_PLAYER] = [
         (120, 4, 8, 0, 0),
         (130, 4, 8, 0, 0),
         (140, 4, 8, 0, 0)
     ];
 
-    let mut status: [u32; NUM_BULLETS] = [0; NUM_BULLETS];
+    let mut status: [u32; BULLETS_PER_PLAYER] = [0; BULLETS_PER_PLAYER];
     for (index, ammo) in player_ammo.iter().enumerate() {
         let status = match ammo {
             Ammo::Loaded => 8,

@@ -9,7 +9,7 @@ use heapless::{String,Vec};
 
 use crate::constants::{
     WIDTH, HEIGHT, NUM_CELLS, MAX_PASSAGES, STEP_SIZE, BULLET_SPEED, 
-    RELOAD_TIME, NUM_BULLETS, HALF_FOV, ANGLE_STEP, WALL_HEIGHT
+    RELOAD_TIME, NUM_BULLETS, NUM_PLAYERS, BULLETS_PER_PLAYER
 };
 
 use crate::wasm4::{
@@ -24,10 +24,10 @@ use crate::arms::{Ammo, Bullet};
 use crate::util::{distance, get_index, point_in_wall};
 
 pub struct State {
-    pub player_x: f32,
-    pub player_y: f32,
-    pub player_angle: f32,
-    pub player_ammo: [Ammo;NUM_BULLETS],
+    pub player_x: [f32; NUM_PLAYERS],
+    pub player_y: [f32; NUM_PLAYERS],
+    pub player_angle: [f32; NUM_PLAYERS],
+    pub player_ammo: [[Ammo;BULLETS_PER_PLAYER]; NUM_PLAYERS],
     pub bullets: Vec<Bullet,NUM_BULLETS>,
     visited: Vec<bool,NUM_CELLS>,
     passages: Vec<(usize,usize),MAX_PASSAGES>,
@@ -40,10 +40,10 @@ impl State {
 
     pub const fn new() -> State {
         State {
-            player_x: 0.5,
-            player_y: 0.5,
-            player_angle: 0.0,
-            player_ammo: [Ammo::Loaded;NUM_BULLETS],
+            player_x: [0.5; NUM_PLAYERS],
+            player_y: [0.5; NUM_PLAYERS],
+            player_angle: [0.0; NUM_PLAYERS],
+            player_ammo: [[Ammo::Loaded; BULLETS_PER_PLAYER]; NUM_PLAYERS],
             bullets: Vec::<Bullet,NUM_BULLETS>::new(),
             visited: Vec::<bool,NUM_CELLS>::new(),
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
@@ -71,57 +71,80 @@ impl State {
     }
 
     /// Update the game state based on user input.
-    pub fn update(&mut self, up: bool, down: bool, left: bool, right: bool, 
-        shoot: bool, spray: bool) 
-    {
-        self.update_player(up, down, left, right);
-        self.update_ammo(shoot, spray);
+    pub fn update(
+        &mut self, 
+        p1_up: bool, p1_down: bool, p1_left: bool, p1_right: bool, p1_shoot: bool, p1_spray: bool,
+        p2_up: bool, p2_down: bool, p2_left: bool, p2_right: bool, p2_shoot: bool, p2_spray: bool,
+        p3_up: bool, p3_down: bool, p3_left: bool, p3_right: bool, p3_shoot: bool, p3_spray: bool,
+        p4_up: bool, p4_down: bool, p4_left: bool, p4_right: bool, p4_shoot: bool, p4_spray: bool
+    ) {
+        // Player 1
+        self.update_player(0, p1_up, p1_down, p1_left, p1_right);
+        self.update_ammo(0, p1_shoot, p1_spray);
+        // Player 2
+        self.update_player(1, p2_up, p2_down, p2_left, p2_right);
+        self.update_ammo(1, p2_shoot, p2_spray);
+        // Player 3
+        self.update_player(2, p3_up, p3_down, p3_left, p3_right);
+        self.update_ammo(2, p3_shoot, p3_spray);
+        // Player 4
+        self.update_player(3, p4_up, p4_down, p4_left, p4_right);
+        self.update_ammo(3, p4_shoot, p4_spray);
         self.update_bullets();
     }
 
     /// Moves a player around based on user input.
-    fn update_player(&mut self, up: bool, down: bool, left: bool, right: bool) {
+    fn update_player(&mut self, pidx: usize, up: bool, down: bool, left: bool, right: bool) {
+        // 
+        let mut player_x = self.player_x[pidx];
+        let mut player_y = self.player_y[pidx];
+        let mut player_angle = self.player_angle[pidx];
+
         // Store the current position and index in case we need to undo a move.
-        let previous_position = (self.player_x, self.player_y);
-        let previous_index = get_index(self.player_x, self.player_y, WIDTH, HEIGHT);
+        let previous_position = (player_x, player_y);
+        let previous_index = get_index(player_x, player_y, WIDTH, HEIGHT);
 
         // Tentative updates to player position and orientation.
         if up {
-            self.player_x += cosf(self.player_angle) * STEP_SIZE;
-            self.player_y += -sinf(self.player_angle) * STEP_SIZE;
+            player_x += cosf(player_angle) * STEP_SIZE;
+            player_y += -sinf(player_angle) * STEP_SIZE;
         }
         if down {
-            self.player_x -= cosf(self.player_angle) * STEP_SIZE;
-            self.player_y -= -sinf(self.player_angle) * STEP_SIZE;
+            player_x -= cosf(player_angle) * STEP_SIZE;
+            player_y -= -sinf(player_angle) * STEP_SIZE;
         }
         if right {
-            self.player_angle -= STEP_SIZE;
+            player_angle -= STEP_SIZE;
         }
         if left {
-            self.player_angle += STEP_SIZE;
+            player_angle += STEP_SIZE;
         }
 
         // If the player has moved to a new cell, then new_index will differ from previous_index.
-        let new_index = get_index(self.player_x, self.player_y, WIDTH, HEIGHT);
+        let new_index = get_index(player_x, player_y, WIDTH, HEIGHT);
 
-        // Conditionally undo the move.
+        // Conditionally apply the move.
         if ( // If move would cause player to leave the maze...
-            (self.player_x <= 0.0) ||
-            (self.player_y <= 0.0) ||
-            (self.player_x as usize >= WIDTH) ||
-            (self.player_y as usize >= HEIGHT)
+            (player_x <= 0.0) ||
+            (player_y <= 0.0) ||
+            (player_x as usize >= WIDTH) ||
+            (player_y as usize >= HEIGHT)
         ) ||
         ( // ...or if they would go through a wall...
             (previous_index != new_index) && 
             there_is_no_passage_here(previous_index, new_index, &self.passages)
         )
-        { // ... undo the move.
-            (self.player_x, self.player_y) = previous_position;
+        { // ... do not apply the move.
+            self.player_angle[pidx] = player_angle;
+        } else {
+            self.player_x[pidx] = player_x;
+            self.player_y[pidx] = player_y;
+            self.player_angle[pidx] = player_angle;
         }
     }
 
     /// Fires a bullet in response to player input; incrementally reloads spent ammo.
-    fn update_ammo(&mut self, shoot: bool, spray: bool) {
+    fn update_ammo(&mut self, pidx: usize, shoot: bool, spray: bool) {
         // When the player presses either button.
         // What's the difference between shoot and spray?
         // The shoot button is debounced, so when it is pressed, only one bullet will fire.
@@ -129,7 +152,7 @@ impl State {
         // This means that a single press will activate it for several frames, shooting all ammo.
         if shoot || spray { 
             // Find the first loaded ammo
-            match self.player_ammo.iter_mut().find(|&&mut a| a == Ammo::Loaded) {
+            match self.player_ammo[pidx].iter_mut().find(|&&mut a| a == Ammo::Loaded) {
                 Some(mut ammo) => {
                     // Change it to reloading
                     *ammo = Ammo::Reloading(RELOAD_TIME);
@@ -139,9 +162,9 @@ impl State {
                     self.seed = rng.gen::<u64>();
                     let attempt = self.bullets.push(
                         Bullet::new(
-                            self.player_x,
-                            self.player_y,
-                            self.player_angle + (rng.gen::<f32>() - 0.5)/10.0, // TODO: Add random jitter
+                            self.player_x[pidx],
+                            self.player_y[pidx],
+                            self.player_angle[pidx] + (rng.gen::<f32>() - 0.5)/10.0, // TODO: Add random jitter
                             true
                         )
                     );
@@ -156,7 +179,7 @@ impl State {
 
         // Find the first ammo that is not loaded and incrementally reload it.
         // Spent ammo take RELOAD_TIME frames to reload and are reloaded one at a time.
-        match self.player_ammo.iter_mut().find(|&&mut a| a != Ammo::Loaded) {
+        match self.player_ammo[pidx].iter_mut().find(|&&mut a| a != Ammo::Loaded) {
             Some(mut ammo) => match ammo {
                 // Decrement time to reload until we reach 0 (means we are loaded)
                 Ammo::Reloading(time_to_reload) => {

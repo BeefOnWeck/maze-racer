@@ -10,12 +10,10 @@ mod view;
 mod wasm4;
 mod arms;
 
-use core::arch::wasm32::i32x4_abs;
-
 use rand::{rngs::SmallRng, SeedableRng};
 use wasm4::{
     DRAW_COLORS,
-    GAMEPAD1,
+    GAMEPAD1, GAMEPAD2, GAMEPAD3, GAMEPAD4,
     BUTTON_UP, BUTTON_DOWN,
     BUTTON_LEFT, BUTTON_RIGHT,
     BUTTON_1, BUTTON_2,
@@ -43,26 +41,44 @@ unsafe fn update() {
         *GAMEPAD1 & BUTTON_LEFT != 0,
         *GAMEPAD1 & BUTTON_RIGHT != 0,
         *GAMEPAD1 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD) & BUTTON_1 != 0,
-        *GAMEPAD1 & BUTTON_2 != 0
+        *GAMEPAD1 & BUTTON_2 != 0,
+        *GAMEPAD2 & BUTTON_UP != 0,
+        *GAMEPAD2 & BUTTON_DOWN != 0,
+        *GAMEPAD2 & BUTTON_LEFT != 0,
+        *GAMEPAD2 & BUTTON_RIGHT != 0,
+        *GAMEPAD2 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD) & BUTTON_1 != 0,
+        *GAMEPAD2 & BUTTON_2 != 0,
+        *GAMEPAD3 & BUTTON_UP != 0,
+        *GAMEPAD3 & BUTTON_DOWN != 0,
+        *GAMEPAD3 & BUTTON_LEFT != 0,
+        *GAMEPAD3 & BUTTON_RIGHT != 0,
+        *GAMEPAD3 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD) & BUTTON_1 != 0,
+        *GAMEPAD3 & BUTTON_2 != 0,
+        *GAMEPAD4 & BUTTON_UP != 0,
+        *GAMEPAD4 & BUTTON_DOWN != 0,
+        *GAMEPAD4 & BUTTON_LEFT != 0,
+        *GAMEPAD4 & BUTTON_RIGHT != 0,
+        *GAMEPAD4 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD) & BUTTON_1 != 0,
+        *GAMEPAD4 & BUTTON_2 != 0,
     );
 
     let walls = get_wall_view(
-        STATE.player_angle, 
-        STATE.player_x, 
-        STATE.player_y, 
+        STATE.player_angle[0], 
+        STATE.player_x[0], 
+        STATE.player_y[0], 
         &STATE.horizontal_walls, 
         &STATE.vertical_walls
     );
 
     let bullets = get_bullet_view(
-        STATE.player_angle, 
-        STATE.player_x, 
-        STATE.player_y,
+        STATE.player_angle[0], 
+        STATE.player_x[0], 
+        STATE.player_y[0],
         &STATE.bullets
     );
 
     let ammunition = get_ammo_view(
-        STATE.player_ammo
+        STATE.player_ammo[0]
     );
 
     // Go through each column on screen and draw walls in the center.
