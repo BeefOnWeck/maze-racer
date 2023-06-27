@@ -3,10 +3,60 @@ use libm::{ceilf, cosf, fabsf, floorf, sinf, tanf, atan2f};
 use heapless::{String,Vec};
 use core::fmt::Write;
 
-use crate::constants::{HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT, NUM_BULLETS, RELOAD_TIME, BULLETS_PER_PLAYER};
+use crate::constants::{HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT, NUM_BULLETS, RELOAD_TIME, BULLETS_PER_PLAYER, NUM_PLAYERS};
 use crate::util::{distance, point_in_wall};
 use crate::arms::{Bullet, Ammo};
 use crate::wasm4::trace;
+
+pub fn get_player_view(
+    player_index: usize,
+    player_angle: [f32; NUM_PLAYERS],
+    player_x: [f32; NUM_PLAYERS],
+    player_y: [f32; NUM_PLAYERS]
+) -> [(i32, i32, u32, u32, bool); NUM_PLAYERS] {
+
+    let fov_upper_limit = player_angle[player_index] + HALF_FOV;
+    let fov_lower_limit = fov_upper_limit - (159.0 * ANGLE_STEP);
+
+    let mut rects = [(0, 0, 0, 0, false); NUM_PLAYERS];
+
+    for index in 0..NUM_PLAYERS {
+        if index != player_index {
+            let rise = player_y[index] - player_y[player_index];
+            let run = player_x[index] - player_x[player_index];
+            let distance_to_player = distance(rise, run);
+
+            let angle_to_player = -1.0 * atan2f(rise, run);
+            let num_wraps = floorf((angle_to_player - player_angle[player_index])/(2.0 * PI));
+            let unwrapped = angle_to_player - 2.0 * PI * num_wraps;
+            let extra_unwrapped = unwrapped - 2.0 * PI;
+
+            let extra_is_closer = fabsf(angle_to_player - unwrapped) > fabsf(angle_to_player - extra_unwrapped);
+            let unwrapped_angle = if extra_is_closer {
+                extra_unwrapped
+            } else {
+                unwrapped
+            };
+
+            // Check if the angle falls in the FOV
+            if unwrapped_angle >= fov_lower_limit && unwrapped_angle <= fov_upper_limit {
+                // Determine where the FOV the bullet falls
+                let h_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32;
+
+                // Determine how large the bullet should appear
+                let size = (0.3 / distance_to_player / ANGLE_STEP) as u32;
+
+                // Vertical correction for far bullets
+                let v_position = 75 + distance_to_player as i32;
+                
+                rects[index] = (h_position, v_position, size, size, true);
+            }
+        }
+    }
+
+    return rects;
+
+}
 
 pub fn get_ammo_view(player_ammo: [Ammo; BULLETS_PER_PLAYER]) -> [(i32, i32, u32, i32, u32); BULLETS_PER_PLAYER] {
 
@@ -21,9 +71,9 @@ pub fn get_ammo_view(player_ammo: [Ammo; BULLETS_PER_PLAYER]) -> [(i32, i32, u32
         let status = match ammo {
             Ammo::Loaded => 8,
             Ammo::Reloading(time_to_reload) => match time_to_reload {
-                201..=255 => 0,
-                151..=200 => 2,
-                50..=150 => 4,
+                193..=255 => 0,
+                127..=192 => 2,
+                65..=128 => 4,
                 _ => 6
             }
         };

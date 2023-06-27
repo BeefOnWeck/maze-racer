@@ -17,12 +17,12 @@ use wasm4::{
     BUTTON_UP, BUTTON_DOWN,
     BUTTON_LEFT, BUTTON_RIGHT,
     BUTTON_1, BUTTON_2,
-    vline, oval
+    vline, oval, rect
 };
 
 use state::State;
 
-use view::{get_wall_view, get_bullet_view, get_ammo_view};
+use view::{get_wall_view, get_bullet_view, get_ammo_view, get_player_view};
 
 static mut STATE: State = State::new();
 static mut PREVIOUS_GAMEPAD: u8 = 0;
@@ -81,6 +81,13 @@ unsafe fn update() {
         STATE.player_ammo[0]
     );
 
+    let players = get_player_view(
+        0,
+        STATE.player_angle, 
+        STATE.player_x, 
+        STATE.player_y
+    );
+
     // Go through each column on screen and draw walls in the center.
     for (x, wall) in walls.iter().enumerate() {
         let (height, shadow) = wall;
@@ -94,6 +101,14 @@ unsafe fn update() {
         }
 
         vline(x as i32, 80 - (height / 2), *height as u32);
+    }
+
+    *DRAW_COLORS = 0x40;
+    for player in players.iter() {
+        let (h_position, v_position, width, height, notme) = player;
+        if *notme {
+            rect(*h_position, *v_position, *width, *height);
+        }
     }
 
     *DRAW_COLORS = 0x04;
