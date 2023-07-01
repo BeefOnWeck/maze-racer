@@ -12,7 +12,7 @@ mod arms;
 
 use rand::{rngs::SmallRng, SeedableRng};
 use wasm4::{
-    DRAW_COLORS,
+    DRAW_COLORS, NETPLAY,
     GAMEPAD1, GAMEPAD2, GAMEPAD3, GAMEPAD4,
     BUTTON_UP, BUTTON_DOWN,
     BUTTON_LEFT, BUTTON_RIGHT,
@@ -62,27 +62,33 @@ unsafe fn update() {
         *GAMEPAD4 & BUTTON_2 != 0,
     );
 
+    let pid = if *NETPLAY & 0b100 != 0 {
+        (*NETPLAY & 0b011) as usize
+    } else {
+        0
+    };
+
     let walls = get_wall_view(
-        STATE.player_angle[0], 
-        STATE.player_x[0], 
-        STATE.player_y[0], 
+        STATE.player_angle[pid], 
+        STATE.player_x[pid], 
+        STATE.player_y[pid], 
         &STATE.horizontal_walls, 
         &STATE.vertical_walls
     );
 
     let bullets = get_bullet_view(
-        STATE.player_angle[0], 
-        STATE.player_x[0], 
-        STATE.player_y[0],
+        STATE.player_angle[pid], 
+        STATE.player_x[pid], 
+        STATE.player_y[pid],
         &STATE.bullets
     );
 
     let ammunition = get_ammo_view(
-        STATE.player_ammo[0]
+        STATE.player_ammo[pid]
     );
 
     let players = get_player_view(
-        0,
+        pid,
         STATE.player_angle, 
         STATE.player_x, 
         STATE.player_y
