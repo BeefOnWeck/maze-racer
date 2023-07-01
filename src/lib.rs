@@ -103,11 +103,48 @@ unsafe fn update() {
         vline(x as i32, 80 - (height / 2), *height as u32);
     }
 
-    *DRAW_COLORS = 0x40;
     for player in players.iter() {
         let (h_position, v_position, width, height, notme) = player;
         if *notme {
+            // Body
+            *DRAW_COLORS = 0x41;
             rect(*h_position, *v_position, *width, *height);
+            // Left eye
+            *DRAW_COLORS = 0x44;
+            let x = *h_position as f32 + *width as f32 * 1.0 / 8.0;
+            let y = *v_position as f32 + *height as f32 * 1.0 / 8.0;
+            let w = *width as f32 / 4.0;
+            let h = *height as f32 / 4.0;
+            rect(
+                x as i32, 
+                y as i32,
+                w as u32,
+                h as u32
+            );
+            // Right eye
+            *DRAW_COLORS = 0x44;
+            let x = *h_position as f32 + *width as f32 * 5.0 / 8.0;
+            let y = *v_position as f32 + *height as f32 * 1.0 / 8.0;
+            let w = *width as f32 / 4.0;
+            let h = *height as f32 / 4.0;
+            rect(
+                x as i32, 
+                y as i32,
+                w as u32,
+                h as u32
+            );
+            // Mouth
+            *DRAW_COLORS = 0x44;
+            let x = *h_position as f32 + *width as f32 * 1.0 / 8.0;
+            let y = *v_position as f32 + *height as f32 * 5.0 / 8.0;
+            let w = *width as f32 * 3.0 / 4.0;
+            let h = *height as f32 * 1.0 / 4.0;
+            rect(
+                x as i32, 
+                y as i32,
+                w as u32,
+                h as u32
+            );
         }
     }
 

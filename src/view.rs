@@ -57,23 +57,24 @@ pub fn get_player_view(
             trace(data);
 
             // Determine how large the player should appear
-            let size = (0.3 / distance_to_player / ANGLE_STEP) as u32;
+            let size = (0.5 / distance_to_player / ANGLE_STEP) as u32;
             let correction = (size / 2) as i32;
             let fov_correction = ANGLE_STEP * ( size as f32 );
 
             // Adjust apparent width based upon the relative angle of the other
             let width = (( size as f32 ) * fabsf(cosf(player_angle[index] - angle_to_player))) as u32;
 
-            // Determine where the FOV the bullet falls
-            let h_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32 - correction;
-
-            // Vertical correction for far bullets
-            let v_position = 75 + distance_to_player as i32;
-
             // Check if the angle falls in the FOV
             if unwrapped_angle >= fov_lower_limit - fov_correction && 
                 unwrapped_angle <= fov_upper_limit + fov_correction 
             {
+                // Determine where the FOV the bullet falls
+                let h_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32 - correction;
+
+                // Vertical correction for far bullets
+                let v_position = 75 + ( distance_to_player / 4.0 ) as i32;
+
+                // Update the view for this player with this index
                 rects[index] = (h_position, v_position, width, size, true);
             }
         }
