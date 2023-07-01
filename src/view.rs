@@ -22,6 +22,7 @@ pub fn get_player_view(
 
     for index in 0..NUM_PLAYERS {
         if index != player_index {
+            // TODO: Refactor into function and reuse here and get_bullet_view
             let rise = player_y[index] - player_y[player_index];
             let run = player_x[index] - player_x[player_index];
             let distance_to_player = distance(rise, run);
@@ -31,24 +32,55 @@ pub fn get_player_view(
             let unwrapped = angle_to_player - 2.0 * PI * num_wraps;
             let extra_unwrapped = unwrapped - 2.0 * PI;
 
-            let extra_is_closer = fabsf(angle_to_player - unwrapped) > fabsf(angle_to_player - extra_unwrapped);
+            let unwrap_diff = fabsf(player_angle[player_index] - unwrapped);
+            let extra_diff = fabsf(player_angle[player_index] - extra_unwrapped);
+            let extra_is_closer = extra_diff < unwrap_diff;
             let unwrapped_angle = if extra_is_closer {
                 extra_unwrapped
             } else {
                 unwrapped
             };
 
+            let mut data = String::<32>::new();
+            write!(data, "angle_to_player: {angle_to_player}").unwrap();
+            trace(data);
+
+            let mut data = String::<32>::new();
+            let temp = player_angle[player_index];
+            write!(data, "player_angle: {temp}").unwrap();
+            trace(data);
+
+            let mut data = String::<32>::new();
+            write!(data, "num_wraps: {num_wraps}").unwrap();
+            trace(data);
+
+            let mut data = String::<32>::new();
+            write!(data, "unwrapped: {unwrapped}").unwrap();
+            trace(data);
+
+            let mut data = String::<32>::new();
+            write!(data, "extra_unwrapped: {extra_unwrapped}").unwrap();
+            trace(data);
+
+            let mut data = String::<32>::new();
+            write!(data, "extra_is_closer: {extra_is_closer}").unwrap();
+            trace(data);
+
+            // Determine how large the player should appear
+            let size = (0.3 / distance_to_player / ANGLE_STEP) as u32;
+            let correction = (size / 2) as i32;
+            let fov_correction = ANGLE_STEP * ( size as f32 );
+
+            // Determine where the FOV the bullet falls
+            let h_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32 - correction;
+
+            // Vertical correction for far bullets
+            let v_position = 75 + distance_to_player as i32;
+
             // Check if the angle falls in the FOV
-            if unwrapped_angle >= fov_lower_limit && unwrapped_angle <= fov_upper_limit {
-                // Determine where the FOV the bullet falls
-                let h_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32;
-
-                // Determine how large the bullet should appear
-                let size = (0.3 / distance_to_player / ANGLE_STEP) as u32;
-
-                // Vertical correction for far bullets
-                let v_position = 75 + distance_to_player as i32;
-                
+            if unwrapped_angle >= fov_lower_limit - fov_correction && 
+                unwrapped_angle <= fov_upper_limit + fov_correction 
+            {
                 rects[index] = (h_position, v_position, size, size, true);
             }
         }
