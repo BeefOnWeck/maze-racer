@@ -25,7 +25,10 @@ use state::State;
 use view::{get_wall_view, get_bullet_view, get_ammo_view, get_player_view};
 
 static mut STATE: State = State::new();
-static mut PREVIOUS_GAMEPAD: u8 = 0;
+static mut PREVIOUS_GAMEPAD1: u8 = 0;
+static mut PREVIOUS_GAMEPAD2: u8 = 0;
+static mut PREVIOUS_GAMEPAD3: u8 = 0;
+static mut PREVIOUS_GAMEPAD4: u8 = 0;
 
 #[no_mangle]
 unsafe fn start() {
@@ -40,25 +43,25 @@ unsafe fn update() {
         *GAMEPAD1 & BUTTON_DOWN != 0,
         *GAMEPAD1 & BUTTON_LEFT != 0,
         *GAMEPAD1 & BUTTON_RIGHT != 0,
-        *GAMEPAD1 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD) & BUTTON_1 != 0,
+        *GAMEPAD1 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD1) & BUTTON_1 != 0,
         *GAMEPAD1 & BUTTON_2 != 0,
         *GAMEPAD2 & BUTTON_UP != 0,
         *GAMEPAD2 & BUTTON_DOWN != 0,
         *GAMEPAD2 & BUTTON_LEFT != 0,
         *GAMEPAD2 & BUTTON_RIGHT != 0,
-        *GAMEPAD2 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD) & BUTTON_1 != 0,
+        *GAMEPAD2 & (*GAMEPAD2 ^ PREVIOUS_GAMEPAD2) & BUTTON_1 != 0,
         *GAMEPAD2 & BUTTON_2 != 0,
         *GAMEPAD3 & BUTTON_UP != 0,
         *GAMEPAD3 & BUTTON_DOWN != 0,
         *GAMEPAD3 & BUTTON_LEFT != 0,
         *GAMEPAD3 & BUTTON_RIGHT != 0,
-        *GAMEPAD3 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD) & BUTTON_1 != 0,
+        *GAMEPAD3 & (*GAMEPAD3 ^ PREVIOUS_GAMEPAD3) & BUTTON_1 != 0,
         *GAMEPAD3 & BUTTON_2 != 0,
         *GAMEPAD4 & BUTTON_UP != 0,
         *GAMEPAD4 & BUTTON_DOWN != 0,
         *GAMEPAD4 & BUTTON_LEFT != 0,
         *GAMEPAD4 & BUTTON_RIGHT != 0,
-        *GAMEPAD4 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD) & BUTTON_1 != 0,
+        *GAMEPAD4 & (*GAMEPAD4 ^ PREVIOUS_GAMEPAD4) & BUTTON_1 != 0,
         *GAMEPAD4 & BUTTON_2 != 0,
     );
 
@@ -176,7 +179,10 @@ unsafe fn update() {
         }
     }
 
-    PREVIOUS_GAMEPAD = *GAMEPAD1;
+    PREVIOUS_GAMEPAD1 = *GAMEPAD1;
+    PREVIOUS_GAMEPAD2 = *GAMEPAD2;
+    PREVIOUS_GAMEPAD3 = *GAMEPAD3;
+    PREVIOUS_GAMEPAD4 = *GAMEPAD4;
 }
 
 
