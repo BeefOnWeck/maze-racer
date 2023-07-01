@@ -42,34 +42,27 @@ pub fn get_player_view(
             };
 
             let mut data = String::<32>::new();
-            write!(data, "angle_to_player: {angle_to_player}").unwrap();
+            let temp = player_x[1];
+            write!(data, "x: {temp}").unwrap();
             trace(data);
 
             let mut data = String::<32>::new();
-            let temp = player_angle[player_index];
-            write!(data, "player_angle: {temp}").unwrap();
+            let temp = player_y[1];
+            write!(data, "y: {temp}").unwrap();
             trace(data);
 
             let mut data = String::<32>::new();
-            write!(data, "num_wraps: {num_wraps}").unwrap();
-            trace(data);
-
-            let mut data = String::<32>::new();
-            write!(data, "unwrapped: {unwrapped}").unwrap();
-            trace(data);
-
-            let mut data = String::<32>::new();
-            write!(data, "extra_unwrapped: {extra_unwrapped}").unwrap();
-            trace(data);
-
-            let mut data = String::<32>::new();
-            write!(data, "extra_is_closer: {extra_is_closer}").unwrap();
+            let temp = player_angle[1];
+            write!(data, "angle: {temp}").unwrap();
             trace(data);
 
             // Determine how large the player should appear
             let size = (0.3 / distance_to_player / ANGLE_STEP) as u32;
             let correction = (size / 2) as i32;
             let fov_correction = ANGLE_STEP * ( size as f32 );
+
+            // Adjust apparent width based upon the relative angle of the other
+            let width = (( size as f32 ) * fabsf(cosf(player_angle[index] - angle_to_player))) as u32;
 
             // Determine where the FOV the bullet falls
             let h_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32 - correction;
@@ -81,7 +74,7 @@ pub fn get_player_view(
             if unwrapped_angle >= fov_lower_limit - fov_correction && 
                 unwrapped_angle <= fov_upper_limit + fov_correction 
             {
-                rects[index] = (h_position, v_position, size, size, true);
+                rects[index] = (h_position, v_position, width, size, true);
             }
         }
     }
