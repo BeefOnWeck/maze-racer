@@ -41,21 +41,6 @@ pub fn get_player_view(
                 unwrapped
             };
 
-            let mut data = String::<32>::new();
-            let temp = player_x[1];
-            write!(data, "x: {temp}").unwrap();
-            trace(data);
-
-            let mut data = String::<32>::new();
-            let temp = player_y[1];
-            write!(data, "y: {temp}").unwrap();
-            trace(data);
-
-            let mut data = String::<32>::new();
-            let temp = player_angle[1];
-            write!(data, "angle: {temp}").unwrap();
-            trace(data);
-
             // Determine how large the player should appear
             let size = (0.5 / distance_to_player / ANGLE_STEP) as u32;
             let correction = (size / 2) as i32;
