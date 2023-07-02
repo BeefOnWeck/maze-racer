@@ -15,4 +15,4 @@ pub const NUM_PLAYERS: usize = 4;
 pub const BULLETS_PER_PLAYER: usize = 3;
 pub const NUM_BULLETS: usize = NUM_PLAYERS * BULLETS_PER_PLAYER;
 pub const RELOAD_TIME: u8 = 255;
-pub const BULLET_SPEED: f32 = 0.01;
+pub const BULLET_SPEED: f32 = 0.05;

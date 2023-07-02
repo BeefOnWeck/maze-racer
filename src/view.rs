@@ -56,8 +56,8 @@ pub fn get_player_view(
                 // Determine where the FOV the bullet falls
                 let h_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32 - correction;
 
-                // Vertical correction for far bullets
-                let v_position = 75 + ( distance_to_player / 4.0 ) as i32;
+                // Vertical correction to account for size
+                let v_position = 80 - ( size as f32 / 2.0 ) as i32;
 
                 // Update the view for this player with this index
                 rects[index] = (h_position, v_position, width, size, true);
