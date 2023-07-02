@@ -13,12 +13,12 @@ pub fn get_player_view(
     player_angle: [f32; NUM_PLAYERS],
     player_x: [f32; NUM_PLAYERS],
     player_y: [f32; NUM_PLAYERS]
-) -> [(i32, i32, u32, u32, bool); NUM_PLAYERS] {
+) -> [(i32, i32, u32, u32, f32, bool); NUM_PLAYERS] {
 
     let fov_upper_limit = player_angle[player_index] + HALF_FOV;
     let fov_lower_limit = fov_upper_limit - (159.0 * ANGLE_STEP);
 
-    let mut rects = [(0, 0, 0, 0, false); NUM_PLAYERS];
+    let mut rects = [(0, 0, 0, 0, 0.0, false); NUM_PLAYERS];
 
     for index in 0..NUM_PLAYERS {
         if index != player_index {
@@ -60,7 +60,7 @@ pub fn get_player_view(
                 let v_position = 80 - ( size as f32 / 2.0 ) as i32;
 
                 // Update the view for this player with this index
-                rects[index] = (h_position, v_position, width, size, true);
+                rects[index] = (h_position, v_position, width, size, distance_to_player, true);
             }
         }
     }
@@ -102,13 +102,13 @@ pub fn get_bullet_view(
     player_x: f32,
     player_y: f32,
     bullets: &Vec<Bullet,NUM_BULLETS>
-) -> [(i32, i32, u32, bool); NUM_BULLETS] {
+) -> [(i32, i32, u32, f32, bool); NUM_BULLETS] {
 
     let fov_upper_limit = player_angle + HALF_FOV;
     let fov_lower_limit = fov_upper_limit - (159.0 * ANGLE_STEP);
 
     // Each oval defined by: x position, size, and visibility flag
-    let mut ovals = [(0, 0, 0, false); NUM_BULLETS];
+    let mut ovals = [(0, 0, 0, 0.0, false); NUM_BULLETS];
 
     for (index, bullet) in bullets.iter().enumerate() {
         // Only consider bullets that are still inflight
@@ -141,7 +141,7 @@ pub fn get_bullet_view(
                 // Vertical correction for far bullets
                 let v_position = 75 + bullet_distance as i32;
                 
-                ovals[index] = (h_position, v_position, size, true);
+                ovals[index] = (h_position, v_position, size, bullet_distance, true);
             }
         }
     }
@@ -156,14 +156,14 @@ pub fn get_wall_view(
     player_y: f32,
     horizontal_walls: &Vec<u16, { HEIGHT + 1 }>,
     vertical_walls: &Vec<u16, { WIDTH + 1 }>,
-) -> [(i32, bool); 160] {
+) -> [(i32, f32, bool); 160] {
     // The player's FOV is split in half by their viewing angle.
     // In order to get the ray's starting angle we must
     // add half the FOV to the player's angle to get
     // the edge of the player's FOV.
     let starting_angle = player_angle + HALF_FOV;
 
-    let mut walls = [(0, false); 160];
+    let mut walls = [(0, 0.0, false); 160];
 
     for (idx, wall) in walls.iter_mut().enumerate() {
         // `idx` is what number ray we are, `wall` is
@@ -185,6 +185,7 @@ pub fn get_wall_view(
         // "convert" it into a wall height.
         *wall = (
             (WALL_HEIGHT / (min_dist * cosf(angle - player_angle))) as i32,
+            min_dist,
             shadow,
         );
     }
