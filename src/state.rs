@@ -28,6 +28,7 @@ pub struct State {
     pub player_y: [f32; NUM_PLAYERS],
     pub player_angle: [f32; NUM_PLAYERS],
     pub player_ammo: [[Ammo;BULLETS_PER_PLAYER]; NUM_PLAYERS],
+    pub player_life: [i32; NUM_PLAYERS],
     pub bullets: Vec<Bullet,NUM_BULLETS>,
     visited: Vec<bool,NUM_CELLS>,
     passages: Vec<(usize,usize),MAX_PASSAGES>,
@@ -44,6 +45,7 @@ impl State {
             player_y: [0.5; NUM_PLAYERS],
             player_angle: [0.0; NUM_PLAYERS],
             player_ammo: [[Ammo::Loaded; BULLETS_PER_PLAYER]; NUM_PLAYERS],
+            player_life: [5; NUM_PLAYERS],
             bullets: Vec::<Bullet,NUM_BULLETS>::new(),
             visited: Vec::<bool,NUM_CELLS>::new(),
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
@@ -90,12 +92,12 @@ impl State {
         // Player 4
         self.update_player(3, p4_up, p4_down, p4_left, p4_right);
         self.update_ammo(3, p4_shoot, p4_spray);
+        // Bullets in flight
         self.update_bullets();
     }
 
     /// Moves a player around based on user input.
     fn update_player(&mut self, pidx: usize, up: bool, down: bool, left: bool, right: bool) {
-        // 
         let mut player_x = self.player_x[pidx];
         let mut player_y = self.player_y[pidx];
         let mut player_angle = self.player_angle[pidx];

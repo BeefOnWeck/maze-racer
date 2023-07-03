@@ -12,12 +12,12 @@ mod arms;
 
 use rand::{rngs::SmallRng, SeedableRng};
 use wasm4::{
-    DRAW_COLORS, NETPLAY,
+    DRAW_COLORS, BLIT_1BPP, NETPLAY,
     GAMEPAD1, GAMEPAD2, GAMEPAD3, GAMEPAD4,
     BUTTON_UP, BUTTON_DOWN,
     BUTTON_LEFT, BUTTON_RIGHT,
     BUTTON_1, BUTTON_2,
-    vline, oval, rect
+    vline, oval, rect, blit
 };
 
 use state::State;
@@ -191,6 +191,22 @@ unsafe fn update() {
         if fill > 0 {
             oval(x+fix, y+fix, fill, fill);
         }
+    }
+
+    const heart_icon: [u8; 8] = [
+        0b10011001,
+        0b00000000,
+        0b00000000,
+        0b00000000,
+        0b00000000,
+        0b10000001,
+        0b11000011,
+        0b11100111,
+    ];
+
+    let num_hearts = STATE.player_life[pid];
+    for heart in 1..=num_hearts {
+        blit(&heart_icon, 10*heart, 4, 8, 8, BLIT_1BPP);
     }
 
     PREVIOUS_GAMEPAD1 = *GAMEPAD1;
