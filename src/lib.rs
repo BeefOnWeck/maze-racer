@@ -11,16 +11,18 @@ mod wasm4;
 mod arms;
 
 use rand::{rngs::SmallRng, SeedableRng};
+use util::point_in_wall;
 use wasm4::{
     DRAW_COLORS, BLIT_1BPP, NETPLAY,
     GAMEPAD1, GAMEPAD2, GAMEPAD3, GAMEPAD4,
     BUTTON_UP, BUTTON_DOWN,
     BUTTON_LEFT, BUTTON_RIGHT,
     BUTTON_1, BUTTON_2,
-    vline, oval, rect, blit
+    vline, oval, rect, blit, line
 };
 
 use state::{State, View};
+use constants::{WIDTH, HEIGHT, NUM_PLAYERS, NUM_BULLETS};
 
 use view::{get_wall_view, get_bullet_view, get_ammo_view, get_player_view};
 
@@ -73,7 +75,6 @@ unsafe fn update() {
 
     match STATE.player_view[pid] {
         View::FirstPerson => {
-
             let walls = get_wall_view(
                 STATE.player_angle[pid], 
                 STATE.player_x[pid], 
@@ -213,7 +214,38 @@ unsafe fn update() {
             }
         },
         View::TopDown => {
-
+            *DRAW_COLORS = 0x04;
+            // Horizontal walls
+            for h in 0..=HEIGHT {
+                let y = h as f32;
+                for w in 0..=WIDTH {
+                    let x = w as f32 + 0.5;
+                    if point_in_wall(y, x, &STATE.horizontal_walls) {
+                        line(((x-0.5)*10.0+15.0) as i32, (y*10.0 + 15.0) as i32, ((x+0.5)*10.0+15.0) as i32, (y*10.0 + 15.0) as i32);
+                    }
+                }
+            }
+            *DRAW_COLORS = 0x04;
+            // Vertical walls
+            for w in 0..=WIDTH {
+                let x = w as f32;
+                for h in 0..=HEIGHT {
+                    let y = h as f32 + 0.5;
+                    if point_in_wall(x, y, &STATE.vertical_walls) {
+                        line((x*10.0 + 15.0) as i32, ((y-0.5)*10.0+15.0) as i32, (x*10.0 + 15.0) as i32, ((y+0.5)*10.0+15.0) as i32);
+                    }
+                }
+            }
+            // Players
+            for player in 0..NUM_PLAYERS {
+                *DRAW_COLORS = 0x44;
+                rect((STATE.player_x[player]*10.0) as i32 + 15 - 3, (STATE.player_y[player]*10.0) as i32 + 15 - 3, 6, 6);
+            }
+            // Bullets
+            for bullet in STATE.bullets.iter() {
+                *DRAW_COLORS = 0x44;
+                oval((bullet.x*10.0) as i32 + 15, (bullet.y*10.0) as i32 + 15, 1, 1);
+            }
         }
     }
 
