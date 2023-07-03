@@ -23,12 +23,19 @@ use crate::arms::{Ammo, Bullet};
 
 use crate::util::{distance, get_index, point_in_wall};
 
+#[derive(Clone, Copy)]
+pub enum View {
+    FirstPerson,
+    TopDown
+}
+
 pub struct State {
     pub player_x: [f32; NUM_PLAYERS],
     pub player_y: [f32; NUM_PLAYERS],
     pub player_angle: [f32; NUM_PLAYERS],
     pub player_ammo: [[Ammo;BULLETS_PER_PLAYER]; NUM_PLAYERS],
     pub player_life: [i32; NUM_PLAYERS],
+    pub player_view: [View; NUM_PLAYERS],
     pub bullets: Vec<Bullet,NUM_BULLETS>,
     visited: Vec<bool,NUM_CELLS>,
     passages: Vec<(usize,usize),MAX_PASSAGES>,
@@ -46,6 +53,7 @@ impl State {
             player_angle: [0.0; NUM_PLAYERS],
             player_ammo: [[Ammo::Loaded; BULLETS_PER_PLAYER]; NUM_PLAYERS],
             player_life: [5; NUM_PLAYERS],
+            player_view: [View::FirstPerson; NUM_PLAYERS],
             bullets: Vec::<Bullet,NUM_BULLETS>::new(),
             visited: Vec::<bool,NUM_CELLS>::new(),
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
@@ -75,25 +83,39 @@ impl State {
     /// Update the game state based on user input.
     pub fn update(
         &mut self, 
-        p1_up: bool, p1_down: bool, p1_left: bool, p1_right: bool, p1_shoot: bool, p1_spray: bool,
-        p2_up: bool, p2_down: bool, p2_left: bool, p2_right: bool, p2_shoot: bool, p2_spray: bool,
-        p3_up: bool, p3_down: bool, p3_left: bool, p3_right: bool, p3_shoot: bool, p3_spray: bool,
-        p4_up: bool, p4_down: bool, p4_left: bool, p4_right: bool, p4_shoot: bool, p4_spray: bool
+        p1_up: bool, p1_down: bool, p1_left: bool, p1_right: bool, p1_shoot: bool, p1_toggle_view: bool,
+        p2_up: bool, p2_down: bool, p2_left: bool, p2_right: bool, p2_shoot: bool, p2_toggle_view: bool,
+        p3_up: bool, p3_down: bool, p3_left: bool, p3_right: bool, p3_shoot: bool, p3_toggle_view: bool,
+        p4_up: bool, p4_down: bool, p4_left: bool, p4_right: bool, p4_shoot: bool, p4_toggle_view: bool
     ) {
         // Player 1
         self.update_player(0, p1_up, p1_down, p1_left, p1_right);
-        self.update_ammo(0, p1_shoot, p1_spray);
+        self.update_ammo(0, p1_shoot);
+        self.update_view(0, p1_toggle_view);
         // Player 2
         self.update_player(1, p2_up, p2_down, p2_left, p2_right);
-        self.update_ammo(1, p2_shoot, p2_spray);
+        self.update_ammo(1, p2_shoot);
+        self.update_view(1, p2_toggle_view);
         // Player 3
         self.update_player(2, p3_up, p3_down, p3_left, p3_right);
-        self.update_ammo(2, p3_shoot, p3_spray);
+        self.update_ammo(2, p3_shoot);
+        self.update_view(2, p3_toggle_view);
         // Player 4
         self.update_player(3, p4_up, p4_down, p4_left, p4_right);
-        self.update_ammo(3, p4_shoot, p4_spray);
+        self.update_ammo(3, p4_shoot);
+        self.update_view(3, p4_toggle_view);
         // Bullets in flight
         self.update_bullets();
+    }
+
+    /// Toggle a players view
+    fn update_view(&mut self, pidx: usize, toggle_view: bool) {
+        if toggle_view {
+            self.player_view[pidx] = match self.player_view[pidx] {
+                View::FirstPerson => View::TopDown,
+                View::TopDown => View::FirstPerson
+            }
+        }
     }
 
     /// Moves a player around based on user input.
@@ -146,13 +168,9 @@ impl State {
     }
 
     /// Fires a bullet in response to player input; incrementally reloads spent ammo.
-    fn update_ammo(&mut self, pidx: usize, shoot: bool, spray: bool) {
-        // When the player presses either button.
-        // What's the difference between shoot and spray?
-        // The shoot button is debounced, so when it is pressed, only one bullet will fire.
-        // The spray button is "sticky." 
-        // This means that a single press will activate it for several frames, shooting all ammo.
-        if shoot || spray { 
+    fn update_ammo(&mut self, pidx: usize, shoot: bool) {
+        // When the player presses the x button.
+        if shoot { 
             // Find the first loaded ammo
             match self.player_ammo[pidx].iter_mut().find(|&&mut a| a == Ammo::Loaded) {
                 Some(mut ammo) => {

@@ -20,7 +20,7 @@ use wasm4::{
     vline, oval, rect, blit
 };
 
-use state::State;
+use state::{State, View};
 
 use view::{get_wall_view, get_bullet_view, get_ammo_view, get_player_view};
 
@@ -44,25 +44,25 @@ unsafe fn update() {
         *GAMEPAD1 & BUTTON_LEFT != 0,
         *GAMEPAD1 & BUTTON_RIGHT != 0,
         *GAMEPAD1 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD1) & BUTTON_1 != 0,
-        *GAMEPAD1 & BUTTON_2 != 0,
+        *GAMEPAD1 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD1) & BUTTON_2 != 0,
         *GAMEPAD2 & BUTTON_UP != 0,
         *GAMEPAD2 & BUTTON_DOWN != 0,
         *GAMEPAD2 & BUTTON_LEFT != 0,
         *GAMEPAD2 & BUTTON_RIGHT != 0,
         *GAMEPAD2 & (*GAMEPAD2 ^ PREVIOUS_GAMEPAD2) & BUTTON_1 != 0,
-        *GAMEPAD2 & BUTTON_2 != 0,
+        *GAMEPAD2 & (*GAMEPAD2 ^ PREVIOUS_GAMEPAD2) & BUTTON_2 != 0,
         *GAMEPAD3 & BUTTON_UP != 0,
         *GAMEPAD3 & BUTTON_DOWN != 0,
         *GAMEPAD3 & BUTTON_LEFT != 0,
         *GAMEPAD3 & BUTTON_RIGHT != 0,
         *GAMEPAD3 & (*GAMEPAD3 ^ PREVIOUS_GAMEPAD3) & BUTTON_1 != 0,
-        *GAMEPAD3 & BUTTON_2 != 0,
+        *GAMEPAD3 & (*GAMEPAD3 ^ PREVIOUS_GAMEPAD3) & BUTTON_2 != 0,
         *GAMEPAD4 & BUTTON_UP != 0,
         *GAMEPAD4 & BUTTON_DOWN != 0,
         *GAMEPAD4 & BUTTON_LEFT != 0,
         *GAMEPAD4 & BUTTON_RIGHT != 0,
         *GAMEPAD4 & (*GAMEPAD4 ^ PREVIOUS_GAMEPAD4) & BUTTON_1 != 0,
-        *GAMEPAD4 & BUTTON_2 != 0,
+        *GAMEPAD4 & (*GAMEPAD4 ^ PREVIOUS_GAMEPAD4) & BUTTON_2 != 0,
     );
 
     let pid = if *NETPLAY & 0b100 != 0 {
@@ -71,142 +71,150 @@ unsafe fn update() {
         0
     };
 
-    let walls = get_wall_view(
-        STATE.player_angle[pid], 
-        STATE.player_x[pid], 
-        STATE.player_y[pid], 
-        &STATE.horizontal_walls, 
-        &STATE.vertical_walls
-    );
+    match STATE.player_view[pid] {
+        View::FirstPerson => {
 
-    let bullets = get_bullet_view(
-        STATE.player_angle[pid], 
-        STATE.player_x[pid], 
-        STATE.player_y[pid],
-        &STATE.bullets
-    );
+            let walls = get_wall_view(
+                STATE.player_angle[pid], 
+                STATE.player_x[pid], 
+                STATE.player_y[pid], 
+                &STATE.horizontal_walls, 
+                &STATE.vertical_walls
+            );
 
-    let ammunition = get_ammo_view(
-        STATE.player_ammo[pid]
-    );
+            let bullets = get_bullet_view(
+                STATE.player_angle[pid], 
+                STATE.player_x[pid], 
+                STATE.player_y[pid],
+                &STATE.bullets
+            );
 
-    let players = get_player_view(
-        pid,
-        STATE.player_angle, 
-        STATE.player_x, 
-        STATE.player_y
-    );
+            let ammunition = get_ammo_view(
+                STATE.player_ammo[pid]
+            );
 
-    // Go through each column on screen and draw walls in the center.
-    for (x, wall) in walls.iter().enumerate() {
-        let (height, dist, shadow) = wall;
+            let players = get_player_view(
+                pid,
+                STATE.player_angle, 
+                STATE.player_x, 
+                STATE.player_y
+            );
 
-        if *shadow {
-            // draw with color 2 for walls with "shadow"
-            *DRAW_COLORS = 0x2;
-        } else {
-            // draw with color 3 for walls without "shadow"
-            *DRAW_COLORS = 0x3;
-        }
+            // Go through each column on screen and draw walls in the center.
+            for (x, wall) in walls.iter().enumerate() {
+                let (height, dist, shadow) = wall;
 
-        vline(x as i32, 80 - (height / 2), *height as u32);
-    }
+                if *shadow {
+                    // draw with color 2 for walls with "shadow"
+                    *DRAW_COLORS = 0x2;
+                } else {
+                    // draw with color 3 for walls without "shadow"
+                    *DRAW_COLORS = 0x3;
+                }
 
-    for player in players.iter() {
-        let (h_position, v_position, width, height, distance, not_me) = player;
-        if *not_me {
-            let x = match *h_position {
-                0..=159 => *h_position as usize,
-                _ => 0
-            };
-            let (_, wall_distance, _) = walls[x];
-            if *distance <= wall_distance {
-                // Body
-                *DRAW_COLORS = 0x41;
-                rect(*h_position, *v_position, *width, *height);
-                // Left eye
-                *DRAW_COLORS = 0x44;
-                let x = *h_position as f32 + *width as f32 * 1.0 / 8.0;
-                let y = *v_position as f32 + *height as f32 * 1.0 / 8.0;
-                let w = *width as f32 / 4.0;
-                let h = *height as f32 / 4.0;
-                rect(
-                    x as i32, 
-                    y as i32,
-                    w as u32,
-                    h as u32
-                );
-                // Right eye
-                *DRAW_COLORS = 0x44;
-                let x = *h_position as f32 + *width as f32 * 5.0 / 8.0;
-                let y = *v_position as f32 + *height as f32 * 1.0 / 8.0;
-                let w = *width as f32 / 4.0;
-                let h = *height as f32 / 4.0;
-                rect(
-                    x as i32, 
-                    y as i32,
-                    w as u32,
-                    h as u32
-                );
-                // Mouth
-                *DRAW_COLORS = 0x44;
-                let x = *h_position as f32 + *width as f32 * 1.0 / 8.0;
-                let y = *v_position as f32 + *height as f32 * 5.0 / 8.0;
-                let w = *width as f32 * 3.0 / 4.0;
-                let h = *height as f32 * 1.0 / 4.0;
-                rect(
-                    x as i32, 
-                    y as i32,
-                    w as u32,
-                    h as u32
-                );
+                vline(x as i32, 80 - (height / 2), *height as u32);
             }
-        }
-    }
 
-    *DRAW_COLORS = 0x04;
-    for bullet in bullets.iter() {
-        let (h_position, v_position, size, distance, inflight) = bullet;
-        let x = match *h_position {
-            0..=159 => *h_position as usize,
-            _ => 0
-        };
-        let (_, wall_distance, _) = walls[x];
-        if *inflight {
-            if *distance < wall_distance {
-                oval(*h_position, *v_position, *size, *size);
+            for player in players.iter() {
+                let (h_position, v_position, width, height, distance, not_me) = player;
+                if *not_me {
+                    let x = match *h_position {
+                        0..=159 => *h_position as usize,
+                        _ => 0
+                    };
+                    let (_, wall_distance, _) = walls[x];
+                    if *distance <= wall_distance {
+                        // Body
+                        *DRAW_COLORS = 0x41;
+                        rect(*h_position, *v_position, *width, *height);
+                        // Left eye
+                        *DRAW_COLORS = 0x44;
+                        let x = *h_position as f32 + *width as f32 * 1.0 / 8.0;
+                        let y = *v_position as f32 + *height as f32 * 1.0 / 8.0;
+                        let w = *width as f32 / 4.0;
+                        let h = *height as f32 / 4.0;
+                        rect(
+                            x as i32, 
+                            y as i32,
+                            w as u32,
+                            h as u32
+                        );
+                        // Right eye
+                        *DRAW_COLORS = 0x44;
+                        let x = *h_position as f32 + *width as f32 * 5.0 / 8.0;
+                        let y = *v_position as f32 + *height as f32 * 1.0 / 8.0;
+                        let w = *width as f32 / 4.0;
+                        let h = *height as f32 / 4.0;
+                        rect(
+                            x as i32, 
+                            y as i32,
+                            w as u32,
+                            h as u32
+                        );
+                        // Mouth
+                        *DRAW_COLORS = 0x44;
+                        let x = *h_position as f32 + *width as f32 * 1.0 / 8.0;
+                        let y = *v_position as f32 + *height as f32 * 5.0 / 8.0;
+                        let w = *width as f32 * 3.0 / 4.0;
+                        let h = *height as f32 * 1.0 / 4.0;
+                        rect(
+                            x as i32, 
+                            y as i32,
+                            w as u32,
+                            h as u32
+                        );
+                    }
+                }
             }
+
+            *DRAW_COLORS = 0x04;
+            for bullet in bullets.iter() {
+                let (h_position, v_position, size, distance, inflight) = bullet;
+                let x = match *h_position {
+                    0..=159 => *h_position as usize,
+                    _ => 0
+                };
+                let (_, wall_distance, _) = walls[x];
+                if *inflight {
+                    if *distance < wall_distance {
+                        oval(*h_position, *v_position, *size, *size);
+                    }
+                }
+            }
+
+            *DRAW_COLORS = 0x40;
+            for ammo in ammunition.iter() {
+                let (x, y, size, _, _) = *ammo;
+                oval(x, y, size, size);
+            }
+
+            *DRAW_COLORS = 0x04;
+            for ammo in ammunition.iter() {
+                let (x, y, _, fix, fill) = *ammo;
+                if fill > 0 {
+                    oval(x+fix, y+fix, fill, fill);
+                }
+            }
+
+            const heart_icon: [u8; 8] = [
+                0b10011001,
+                0b00000000,
+                0b00000000,
+                0b00000000,
+                0b00000000,
+                0b10000001,
+                0b11000011,
+                0b11100111,
+            ];
+
+            let num_hearts = STATE.player_life[pid];
+            for heart in 1..=num_hearts {
+                blit(&heart_icon, 10*heart, 4, 8, 8, BLIT_1BPP);
+            }
+        },
+        View::TopDown => {
+
         }
-    }
-
-    *DRAW_COLORS = 0x40;
-    for ammo in ammunition.iter() {
-        let (x, y, size, _, _) = *ammo;
-        oval(x, y, size, size);
-    }
-
-    *DRAW_COLORS = 0x04;
-    for ammo in ammunition.iter() {
-        let (x, y, _, fix, fill) = *ammo;
-        if fill > 0 {
-            oval(x+fix, y+fix, fill, fill);
-        }
-    }
-
-    const heart_icon: [u8; 8] = [
-        0b10011001,
-        0b00000000,
-        0b00000000,
-        0b00000000,
-        0b00000000,
-        0b10000001,
-        0b11000011,
-        0b11100111,
-    ];
-
-    let num_hearts = STATE.player_life[pid];
-    for heart in 1..=num_hearts {
-        blit(&heart_icon, 10*heart, 4, 8, 8, BLIT_1BPP);
     }
 
     PREVIOUS_GAMEPAD1 = *GAMEPAD1;
