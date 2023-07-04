@@ -9,7 +9,7 @@ use heapless::{String,Vec};
 
 use crate::constants::{
     WIDTH, HEIGHT, NUM_CELLS, MAX_PASSAGES, STEP_SIZE, BULLET_SPEED, 
-    RELOAD_TIME, NUM_BULLETS, NUM_PLAYERS, BULLETS_PER_PLAYER
+    RELOAD_TIME, NUM_BULLETS, NUM_PLAYERS, BULLETS_PER_PLAYER, PLAYER_WIDTH
 };
 
 use crate::wasm4::{
@@ -184,6 +184,7 @@ impl State {
                         Bullet::new(
                             self.player_x[pidx],
                             self.player_y[pidx],
+                            pidx,
                             self.player_angle[pidx] + (rng.gen::<f32>() - 0.5)/10.0, // TODO: Add random jitter
                             true
                         )
@@ -234,7 +235,38 @@ impl State {
                 b.inflight = false;
                 trace("Bullet done");
             }
-
+            
+            if b.inflight {
+                for pidx in 0..NUM_PLAYERS {
+                    if pidx != b.owner {
+                        let player_index = get_index(
+                            self.player_x[pidx], 
+                            self.player_y[pidx], 
+                            WIDTH, 
+                            HEIGHT
+                        );
+                        if player_index == new_index {
+                            let relative_angle = b.angle - self.player_angle[pidx];
+                            let striking_distance = PLAYER_WIDTH * fabsf(cosf(relative_angle));
+                            // let mut data = String::<32>::new();
+                            // write!(data, "sd: {striking_distance}").unwrap();
+                            // trace(data);
+                            let separation = distance(
+                                b.x - self.player_x[pidx], 
+                                b.y - self.player_y[pidx]
+                            );
+                            // let mut data = String::<32>::new();
+                            // write!(data, "sep: {separation}").unwrap();
+                            // trace(data);
+                            if separation <= striking_distance {
+                                trace("Hit!");
+                                self.player_life[pidx] -= 1;
+                                b.inflight = false;
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         // TODO: Player collision detection.

@@ -4,7 +4,7 @@ use heapless::Vec;
 
 use crate::constants::{
     HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT, 
-    NUM_BULLETS, BULLETS_PER_PLAYER, NUM_PLAYERS
+    NUM_BULLETS, BULLETS_PER_PLAYER, NUM_PLAYERS, PLAYER_WIDTH
 };
 use crate::util::{distance, point_in_wall};
 use crate::arms::{Bullet, Ammo};
@@ -45,7 +45,7 @@ pub fn get_player_view(
             };
 
             // Determine how large the player should appear
-            let size = (0.5 / distance_to_player / ANGLE_STEP) as u32;
+            let size = (PLAYER_WIDTH / distance_to_player / ANGLE_STEP) as u32;
             let correction = (size / 2) as i32;
             let fov_correction = ANGLE_STEP * ( size as f32 );
 

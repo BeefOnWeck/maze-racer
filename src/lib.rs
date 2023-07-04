@@ -28,6 +28,8 @@ use constants::{WIDTH, HEIGHT, NUM_PLAYERS, NUM_BULLETS};
 
 use view::{get_wall_view, get_bullet_view, get_ammo_view, get_player_view};
 
+use crate::constants::PLAYER_WIDTH;
+
 static mut STATE: State = State::new();
 static mut PREVIOUS_GAMEPAD1: u8 = 0;
 static mut PREVIOUS_GAMEPAD2: u8 = 0;
@@ -137,7 +139,7 @@ unsafe fn update() {
                     if *distance <= wall_distance {
                         // Body
                         *DRAW_COLORS = 0x41;
-                        rect(*h_position, *v_position, *width, *height);
+                        rect(*h_position + ((*height - *width) / 2) as i32, *v_position, *width, *height);
                         // Left eye
                         *DRAW_COLORS = 0x44;
                         let x = *h_position as f32 + *width as f32 * 1.0 / 8.0;
@@ -145,7 +147,7 @@ unsafe fn update() {
                         let w = *width as f32 / 4.0;
                         let h = *height as f32 / 4.0;
                         rect(
-                            x as i32, 
+                            x as i32  + ((*height - *width) / 2) as i32, 
                             y as i32,
                             w as u32,
                             h as u32
@@ -157,7 +159,7 @@ unsafe fn update() {
                         let w = *width as f32 / 4.0;
                         let h = *height as f32 / 4.0;
                         rect(
-                            x as i32, 
+                            x as i32  + ((*height - *width) / 2) as i32, 
                             y as i32,
                             w as u32,
                             h as u32
@@ -169,7 +171,7 @@ unsafe fn update() {
                         let w = *width as f32 * 3.0 / 4.0;
                         let h = *height as f32 * 1.0 / 4.0;
                         rect(
-                            x as i32, 
+                            x as i32  + ((*height - *width) / 2) as i32, 
                             y as i32,
                             w as u32,
                             h as u32
