@@ -10,6 +10,7 @@ mod view;
 mod wasm4;
 mod arms;
 
+use heapless::{String};
 use rand::{rngs::SmallRng, SeedableRng};
 use util::point_in_wall;
 use wasm4::{
@@ -18,8 +19,9 @@ use wasm4::{
     BUTTON_UP, BUTTON_DOWN,
     BUTTON_LEFT, BUTTON_RIGHT,
     BUTTON_1, BUTTON_2,
-    vline, oval, rect, blit, line
+    vline, oval, rect, blit, line, diskw, diskr, trace
 };
+use core::fmt::Write;
 
 use state::{State, View};
 use constants::{WIDTH, HEIGHT, NUM_PLAYERS, NUM_BULLETS};
@@ -34,7 +36,12 @@ static mut PREVIOUS_GAMEPAD4: u8 = 0;
 
 #[no_mangle]
 unsafe fn start() {
-    let mut RNG = SmallRng::seed_from_u64(11);
+
+    let mut buffer = [0u8; core::mem::size_of::<i32>()];
+    diskr(buffer.as_mut_ptr(), buffer.len() as u32);
+    let seed = u32::from_le_bytes(buffer);
+
+    let mut RNG = SmallRng::seed_from_u64(seed as u64);
     STATE.generate_maze(&mut RNG);
 }
 

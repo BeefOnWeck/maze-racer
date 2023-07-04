@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+  {{#html.metadata}}
+  <meta name="{{name}}" content="{{content}}">
+  {{/html.metadata}}
+  {{#html.description}}
+  <meta name="description" content="{{html.description}}">
+  {{/html.description}}
+  {{#html.iconUrl}}
+  <link rel="shortcut icon" href="{{html.iconUrl}}">
+  {{/html.iconUrl}}
+  {{#html.diskPrefix}}
+  <script id="wasm4-disk-prefix" type="text/plain">{{{html.diskPrefix}}}</script>
+  {{/html.diskPrefix}}
+  <title>{{html.title}}</title>
+  <style>{{{html.wasm4Css}}}</style>
+</head>
+<body>
+  <script>
+    // Source: https://github.com/aduros/wasm4/blob/main/runtimes/web/src/z85.ts
+    const ENCODER = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#".split("");
+    let encode = function(src) {
+      const size = src.length;
+      const extra = (size % 4);
+      const paddedSize = extra ? size + 4-extra : size;
+
+      let str = "",
+        byte_nbr = 0,
+        value = 0;
+      while (byte_nbr < paddedSize) {
+        const b = (byte_nbr < size) ? src[byte_nbr] : 0;
+        ++byte_nbr;
+        value = (value * 256) + b;
+        if ((byte_nbr % 4) == 0) {
+          let divisor = 85 * 85 * 85 * 85;
+          while (divisor >= 1) {
+            const idx = Math.floor(value / divisor) % 85;
+            str += ENCODER[idx];
+            divisor /= 85;
+          }
+          value = 0;
+        }
+      }
+
+      return str;
+    };
+
+    let seedArray = new Uint8Array([255,255,255,255]);
+    self.crypto.getRandomValues(seedArray);
+
+    localStorage.setItem('Maze Racer-disk', encode(seedArray));
+  </script>
+  <script id="wasm4-cart-json" type="application/json">{{{html.wasmCartJson}}}</script>
+  <script>{{{html.wasm4js}}}</script>
+  <wasm4-app></wasm4-app>
+</body>
+</html>
