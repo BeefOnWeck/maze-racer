@@ -80,6 +80,7 @@ unsafe fn update() {
         0
     };
 
+    // Draw either the first person view or the top-down view
     match STATE.player_view[pid] {
         View::FirstPerson => {
             let walls = get_wall_view(
@@ -108,9 +109,9 @@ unsafe fn update() {
                 STATE.player_y
             );
 
-            // Go through each column on screen and draw walls in the center.
+            // Draw walls first
             for (x, wall) in walls.iter().enumerate() {
-                let (height, dist, shadow) = wall;
+                let (height, _, shadow) = wall;
 
                 if *shadow {
                     // draw with color 2 for walls with "shadow"
@@ -123,6 +124,7 @@ unsafe fn update() {
                 vline(x as i32, 80 - (height / 2), *height as u32);
             }
 
+            // Then draw players
             for player in players.iter() {
                 let (h_position, v_position, width, height, distance, not_me) = player;
                 if *not_me {
@@ -131,6 +133,7 @@ unsafe fn update() {
                         _ => 0
                     };
                     let (_, wall_distance, _) = walls[x];
+                    // Only draw if not obstructed by a wall
                     if *distance <= wall_distance {
                         // Body
                         *DRAW_COLORS = 0x41;
@@ -175,6 +178,7 @@ unsafe fn update() {
                 }
             }
 
+            // Next draw bullets that are in view
             *DRAW_COLORS = 0x04;
             for bullet in bullets.iter() {
                 let (h_position, v_position, size, distance, inflight) = bullet;
@@ -190,12 +194,12 @@ unsafe fn update() {
                 }
             }
 
+            // And draw the ammunition dashboard
             *DRAW_COLORS = 0x40;
             for ammo in ammunition.iter() {
                 let (x, y, size, _, _) = *ammo;
                 oval(x, y, size, size);
             }
-
             *DRAW_COLORS = 0x04;
             for ammo in ammunition.iter() {
                 let (x, y, _, fix, fill) = *ammo;
@@ -204,7 +208,7 @@ unsafe fn update() {
                 }
             }
 
-            const heart_icon: [u8; 8] = [
+            const HEART_ICON: [u8; 8] = [
                 0b10011001,
                 0b00000000,
                 0b00000000,
@@ -215,12 +219,15 @@ unsafe fn update() {
                 0b11100111,
             ];
 
+            // Finally draw the life dashboard
             let num_hearts = STATE.player_life[pid];
             for heart in 1..=num_hearts {
-                blit(&heart_icon, 10*heart, 4, 8, 8, BLIT_1BPP);
+                blit(&HEART_ICON, 10*heart, 4, 8, 8, BLIT_1BPP);
             }
         },
         View::TopDown => {
+            // NOTE: Right now the top-down view is just a real-time display of the maze.
+            //       But in the future it could be a place for selecting other weapons.
             *DRAW_COLORS = 0x04;
             // Horizontal walls
             for h in 0..=HEIGHT {
@@ -243,14 +250,14 @@ unsafe fn update() {
                     }
                 }
             }
+            *DRAW_COLORS = 0x44;
             // Players
             for player in 0..NUM_PLAYERS {
-                *DRAW_COLORS = 0x44;
                 rect((STATE.player_x[player]*10.0) as i32 + 15 - 3, (STATE.player_y[player]*10.0) as i32 + 15 - 3, 6, 6);
             }
+            *DRAW_COLORS = 0x44;
             // Bullets
             for bullet in STATE.bullets.iter() {
-                *DRAW_COLORS = 0x44;
                 oval((bullet.x*10.0) as i32 + 15, (bullet.y*10.0) as i32 + 15, 1, 1);
             }
         }

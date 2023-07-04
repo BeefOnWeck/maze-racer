@@ -1,13 +1,15 @@
 use core::f32::consts::{PI, FRAC_PI_2};
-use libm::{ceilf, cosf, fabsf, floorf, sinf, tanf, atan2f};
-use heapless::{String,Vec};
-use core::fmt::Write;
+use libm::{ceilf, cosf, fabsf, floorf, tanf, atan2f};
+use heapless::Vec;
 
-use crate::constants::{HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT, NUM_BULLETS, RELOAD_TIME, BULLETS_PER_PLAYER, NUM_PLAYERS};
+use crate::constants::{
+    HEIGHT, WIDTH, HALF_FOV, ANGLE_STEP, WALL_HEIGHT, 
+    NUM_BULLETS, BULLETS_PER_PLAYER, NUM_PLAYERS
+};
 use crate::util::{distance, point_in_wall};
 use crate::arms::{Bullet, Ammo};
-use crate::wasm4::trace;
 
+/// Filters other players by a player's field of view and returns drawing information. 
 pub fn get_player_view(
     player_index: usize,
     player_angle: [f32; NUM_PLAYERS],
@@ -18,6 +20,7 @@ pub fn get_player_view(
     let fov_upper_limit = player_angle[player_index] + HALF_FOV;
     let fov_lower_limit = fov_upper_limit - (159.0 * ANGLE_STEP);
 
+    // Each rect defined by: x position, y position, width, height, distance, and visibility flag
     let mut rects = [(0, 0, 0, 0, 0.0, false); NUM_PLAYERS];
 
     for index in 0..NUM_PLAYERS {
@@ -46,7 +49,7 @@ pub fn get_player_view(
             let correction = (size / 2) as i32;
             let fov_correction = ANGLE_STEP * ( size as f32 );
 
-            // Adjust apparent width based upon the relative angle of the other
+            // Adjust apparent width based upon the relative angle of the player
             let width = (( size as f32 ) * fabsf(cosf(player_angle[index] - angle_to_player))) as u32;
 
             // Check if the angle falls in the FOV
@@ -69,15 +72,17 @@ pub fn get_player_view(
 
 }
 
+/// Returns information for drawing a player's ammunition dashboard
 pub fn get_ammo_view(player_ammo: [Ammo; BULLETS_PER_PLAYER]) -> [(i32, i32, u32, i32, u32); BULLETS_PER_PLAYER] {
 
+    // Each player ammunition is represented by x and y positions, size, correction, and status.
     let mut ammo_dashboard: [(i32, i32, u32, i32, u32); BULLETS_PER_PLAYER] = [
         (120, 4, 8, 0, 0),
         (130, 4, 8, 0, 0),
         (140, 4, 8, 0, 0)
     ];
 
-    let mut status: [u32; BULLETS_PER_PLAYER] = [0; BULLETS_PER_PLAYER];
+    // Determine status for each ammo
     for (index, ammo) in player_ammo.iter().enumerate() {
         let status = match ammo {
             Ammo::Loaded => 8,
@@ -88,15 +93,18 @@ pub fn get_ammo_view(player_ammo: [Ammo; BULLETS_PER_PLAYER]) -> [(i32, i32, u32
                 _ => 6
             }
         };
+        // We need a correction to get concentric circles as status changes
         let correction = (8 - status as i32) / 2;
         ammo_dashboard[index].3 = correction;
         ammo_dashboard[index].4 = status;
     }
     
+    // Each player ammunition is represented by x and y positions, size, correction, and status.
     return ammo_dashboard;
 
 }
 
+/// Filters bullets by player's field of view and returns bullet size and position on screen.
 pub fn get_bullet_view(
     player_angle: f32,
     player_x: f32,
@@ -107,9 +115,10 @@ pub fn get_bullet_view(
     let fov_upper_limit = player_angle + HALF_FOV;
     let fov_lower_limit = fov_upper_limit - (159.0 * ANGLE_STEP);
 
-    // Each oval defined by: x position, size, and visibility flag
+    // Each oval defined by: x position, y position, size, distance, and visibility flag
     let mut ovals = [(0, 0, 0, 0.0, false); NUM_BULLETS];
 
+    // Enumerate the bullets and update their oval if they are in the field of view
     for (index, bullet) in bullets.iter().enumerate() {
         // Only consider bullets that are still inflight
         if bullet.inflight {
@@ -118,11 +127,13 @@ pub fn get_bullet_view(
             let run = bullet.x - player_x;
             let bullet_distance = distance(rise, run);
 
+            // Calculate the angle and unwrap
             let bullet_angle = -1.0 * atan2f(rise, run);
             let num_wraps = floorf((bullet_angle - player_angle)/(2.0 * PI));
             let unwrapped = bullet_angle - 2.0 * PI * num_wraps;
             let extra_unwrapped = unwrapped - 2.0 * PI;
 
+            // Sometimes unwrapping is off by one (end condition)
             let extra_is_closer = fabsf(player_angle - unwrapped) > fabsf(player_angle - extra_unwrapped);
             let unwrapped_angle = if extra_is_closer {
                 extra_unwrapped
@@ -138,7 +149,7 @@ pub fn get_bullet_view(
                 // Determine how large the bullet should appear
                 let size = (0.1 / bullet_distance / ANGLE_STEP) as u32;
 
-                // Vertical correction for far bullets
+                // Vertical correction for far away bullets
                 let v_position = 75 + bullet_distance as i32;
                 
                 ovals[index] = (h_position, v_position, size, bullet_distance, true);
@@ -146,10 +157,14 @@ pub fn get_bullet_view(
         }
     }
 
+    // Each oval defined by: x position, y position, size, distance, and visibility flag
     return ovals;
 }
 
 /// Returns 160 wall heights and their "color" from the player's perspective.
+/// Source: https://github.com/grantshandy/wasm4-raycaster/blob/main/src/lib.rs
+/// Copyright (c) 2023 Grant Handy
+/// MIT License
 pub fn get_wall_view(
     player_angle: f32,
     player_x: f32,
@@ -194,6 +209,9 @@ pub fn get_wall_view(
 }
 
 /// Returns the nearest wall the ray intersects with on a horizontal grid line.
+/// Source: https://github.com/grantshandy/wasm4-raycaster/blob/main/src/lib.rs
+/// Copyright (c) 2023 Grant Handy
+/// MIT License
 fn horizontal_intersection(
     player_x: f32,
     player_y: f32,
@@ -256,6 +274,9 @@ fn horizontal_intersection(
 }
 
 /// Returns the nearest wall the ray intersects with on a vertical grid line.
+/// Source: https://github.com/grantshandy/wasm4-raycaster/blob/main/src/lib.rs
+/// Copyright (c) 2023 Grant Handy
+/// MIT License
 fn vertical_intersection(
     player_x: f32,
     player_y: f32,

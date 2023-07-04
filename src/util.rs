@@ -1,7 +1,6 @@
 use libm::{sqrtf};
 use heapless::{Vec};
 
-// TODO: Move to util.rs
 pub fn distance(a: f32, b: f32) -> f32 {
     sqrtf((a * a) + (b * b))
 }

@@ -227,12 +227,10 @@ impl State {
             let new_index = get_index(b.x, b.y, WIDTH, HEIGHT);
             if ( // If bullet leaves the maze...
                 b.x <= 0.0 || b.y <= 0.0 || b.x as usize >= WIDTH || b.y as usize >= HEIGHT
-            ) ||
-            ( // ...or if it would go through a wall...
+            ) || ( // ...or if it would go through a wall...
                 (previous_index != new_index) && 
                 there_is_no_passage_here(previous_index, new_index, &self.passages)
-            )
-            { // ... mark inflight as false.
+            ) { // ... mark inflight as false.
                 b.inflight = false;
                 trace("Bullet done");
             }
