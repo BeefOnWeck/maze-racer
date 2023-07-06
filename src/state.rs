@@ -88,21 +88,29 @@ impl State {
         p4_up: bool, p4_down: bool, p4_left: bool, p4_right: bool, p4_shoot: bool, p4_toggle_view: bool
     ) {
         // Player 1
-        self.update_player(0, p1_up, p1_down, p1_left, p1_right);
-        self.update_ammo(0, p1_shoot);
-        self.update_view(0, p1_toggle_view);
+        if self.player_life[0] > 0 {
+            self.update_player(0, p1_up, p1_down, p1_left, p1_right);
+            self.update_ammo(0, p1_shoot);
+            self.update_view(0, p1_toggle_view);
+        }
         // Player 2
-        self.update_player(1, p2_up, p2_down, p2_left, p2_right);
-        self.update_ammo(1, p2_shoot);
-        self.update_view(1, p2_toggle_view);
+        if self.player_life[1] > 0 {
+            self.update_player(1, p2_up, p2_down, p2_left, p2_right);
+            self.update_ammo(1, p2_shoot);
+            self.update_view(1, p2_toggle_view);
+        }
         // Player 3
-        self.update_player(2, p3_up, p3_down, p3_left, p3_right);
-        self.update_ammo(2, p3_shoot);
-        self.update_view(2, p3_toggle_view);
+        if self.player_life[2] > 0 {
+            self.update_player(2, p3_up, p3_down, p3_left, p3_right);
+            self.update_ammo(2, p3_shoot);
+            self.update_view(2, p3_toggle_view);
+        }
         // Player 4
-        self.update_player(3, p4_up, p4_down, p4_left, p4_right);
-        self.update_ammo(3, p4_shoot);
-        self.update_view(3, p4_toggle_view);
+        if self.player_life[3] > 0 {
+            self.update_player(3, p4_up, p4_down, p4_left, p4_right);
+            self.update_ammo(3, p4_shoot);
+            self.update_view(3, p4_toggle_view);
+        }
         // Bullets in flight
         self.update_bullets();
     }

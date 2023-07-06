@@ -19,7 +19,7 @@ use wasm4::{
     BUTTON_UP, BUTTON_DOWN,
     BUTTON_LEFT, BUTTON_RIGHT,
     BUTTON_1, BUTTON_2,
-    vline, oval, rect, blit, line, diskr, trace
+    vline, oval, rect, blit, line, diskr, trace, text
 };
 use core::fmt::Write;
 
@@ -106,7 +106,8 @@ unsafe fn update() {
                 pid,
                 STATE.player_angle, 
                 STATE.player_x, 
-                STATE.player_y
+                STATE.player_y,
+                STATE.player_life
             );
 
             // Draw walls first
@@ -126,8 +127,8 @@ unsafe fn update() {
 
             // Then draw players
             for player in players.iter() {
-                let (h_position, v_position, width, height, distance, not_me) = player;
-                if *not_me {
+                let (h_position, v_position, width, height, distance, alive, not_me) = player;
+                if *not_me && *alive {
                     let x = match *h_position {
                         0..=159 => *h_position as usize,
                         _ => 0
@@ -261,6 +262,15 @@ unsafe fn update() {
                 oval((bullet.x*10.0) as i32 + 15, (bullet.y*10.0) as i32 + 15, 1, 1);
             }
         }
+    }
+
+    if STATE.player_life[pid] <= 0 {
+        *DRAW_COLORS = 0x14;
+        let mut message = String::<32>::new();
+        let player_number = pid + 1;
+        write!(message, "PLAYER {player_number} IS").unwrap();
+        text(message, 40, 72);
+        text("ELIMINATED!", 40, 80);
     }
 
     PREVIOUS_GAMEPAD1 = *GAMEPAD1;

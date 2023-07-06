@@ -14,56 +14,60 @@ pub fn get_player_view(
     player_index: usize,
     player_angle: [f32; NUM_PLAYERS],
     player_x: [f32; NUM_PLAYERS],
-    player_y: [f32; NUM_PLAYERS]
-) -> [(i32, i32, u32, u32, f32, bool); NUM_PLAYERS] {
+    player_y: [f32; NUM_PLAYERS],
+    player_life: [i32; NUM_PLAYERS]
+) -> [(i32, i32, u32, u32, f32, bool, bool); NUM_PLAYERS] {
 
     let fov_upper_limit = player_angle[player_index] + HALF_FOV;
     let fov_lower_limit = fov_upper_limit - (159.0 * ANGLE_STEP);
 
     // Each rect defined by: x position, y position, width, height, distance, and visibility flag
-    let mut rects = [(0, 0, 0, 0, 0.0, false); NUM_PLAYERS];
+    let mut rects = [(0, 0, 0, 0, 0.0, false, false); NUM_PLAYERS];
 
     for index in 0..NUM_PLAYERS {
         if index != player_index {
-            // TODO: Refactor into function and reuse here and get_bullet_view
-            let rise = player_y[index] - player_y[player_index];
-            let run = player_x[index] - player_x[player_index];
-            let distance_to_player = distance(rise, run);
+            let alive = player_life[index] > 0;
+            if alive {
+                // TODO: Refactor into function and reuse here and get_bullet_view
+                let rise = player_y[index] - player_y[player_index];
+                let run = player_x[index] - player_x[player_index];
+                let distance_to_player = distance(rise, run);
 
-            let angle_to_player = -1.0 * atan2f(rise, run);
-            let num_wraps = floorf((angle_to_player - player_angle[player_index])/(2.0 * PI));
-            let unwrapped = angle_to_player - 2.0 * PI * num_wraps;
-            let extra_unwrapped = unwrapped - 2.0 * PI;
+                let angle_to_player = -1.0 * atan2f(rise, run);
+                let num_wraps = floorf((angle_to_player - player_angle[player_index])/(2.0 * PI));
+                let unwrapped = angle_to_player - 2.0 * PI * num_wraps;
+                let extra_unwrapped = unwrapped - 2.0 * PI;
 
-            let unwrap_diff = fabsf(player_angle[player_index] - unwrapped);
-            let extra_diff = fabsf(player_angle[player_index] - extra_unwrapped);
-            let extra_is_closer = extra_diff < unwrap_diff;
-            let unwrapped_angle = if extra_is_closer {
-                extra_unwrapped
-            } else {
-                unwrapped
-            };
+                let unwrap_diff = fabsf(player_angle[player_index] - unwrapped);
+                let extra_diff = fabsf(player_angle[player_index] - extra_unwrapped);
+                let extra_is_closer = extra_diff < unwrap_diff;
+                let unwrapped_angle = if extra_is_closer {
+                    extra_unwrapped
+                } else {
+                    unwrapped
+                };
 
-            // Determine how large the player should appear
-            let size = (PLAYER_WIDTH / distance_to_player / ANGLE_STEP) as u32;
-            let correction = (size / 2) as i32;
-            let fov_correction = ANGLE_STEP * ( size as f32 );
+                // Determine how large the player should appear
+                let size = (PLAYER_WIDTH / distance_to_player / ANGLE_STEP) as u32;
+                let correction = (size / 2) as i32;
+                let fov_correction = ANGLE_STEP * ( size as f32 );
 
-            // Adjust apparent width based upon the relative angle of the player
-            let width = (( size as f32 ) * fabsf(cosf(player_angle[index] - angle_to_player))) as u32;
+                // Adjust apparent width based upon the relative angle of the player
+                let width = (( size as f32 ) * fabsf(cosf(player_angle[index] - angle_to_player))) as u32;
 
-            // Check if the angle falls in the FOV
-            if unwrapped_angle >= fov_lower_limit - fov_correction && 
-                unwrapped_angle <= fov_upper_limit + fov_correction 
-            {
-                // Determine where the FOV the bullet falls
-                let h_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32 - correction;
+                // Check if the angle falls in the FOV
+                if unwrapped_angle >= fov_lower_limit - fov_correction && 
+                    unwrapped_angle <= fov_upper_limit + fov_correction 
+                {
+                    // Determine where the FOV the bullet falls
+                    let h_position = ((fov_upper_limit - unwrapped_angle) / ANGLE_STEP) as i32 - correction;
 
-                // Vertical correction to account for size
-                let v_position = 80 - ( size as f32 / 2.0 ) as i32;
+                    // Vertical correction to account for size
+                    let v_position = 80 - ( size as f32 / 2.0 ) as i32;
 
-                // Update the view for this player with this index
-                rects[index] = (h_position, v_position, width, size, distance_to_player, true);
+                    // Update the view for this player with this index
+                    rects[index] = (h_position, v_position, width, size, distance_to_player, true, true);
+                }
             }
         }
     }
