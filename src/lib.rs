@@ -135,7 +135,7 @@ unsafe fn update() {
                     };
                     let (_, wall_distance, _) = walls[x];
                     // Only draw if not obstructed by a wall
-                    if *distance <= wall_distance {
+                    if *distance < wall_distance {
                         // Body
                         *DRAW_COLORS = 0x41;
                         rect(*h_position + ((*height - *width) / 2) as i32, *v_position, *width, *height);
