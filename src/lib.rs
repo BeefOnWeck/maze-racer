@@ -19,16 +19,14 @@ use wasm4::{
     BUTTON_UP, BUTTON_DOWN,
     BUTTON_LEFT, BUTTON_RIGHT,
     BUTTON_1, BUTTON_2,
-    vline, oval, rect, blit, line, diskw, diskr, trace
+    vline, oval, rect, blit, line, diskr, trace
 };
 use core::fmt::Write;
 
 use state::{State, View};
-use constants::{WIDTH, HEIGHT, NUM_PLAYERS, NUM_BULLETS};
+use constants::{WIDTH, HEIGHT, NUM_PLAYERS};
 
 use view::{get_wall_view, get_bullet_view, get_ammo_view, get_player_view};
-
-use crate::constants::PLAYER_WIDTH;
 
 static mut STATE: State = State::new();
 static mut PREVIOUS_GAMEPAD1: u8 = 0;

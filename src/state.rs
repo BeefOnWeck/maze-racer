@@ -1,5 +1,4 @@
-use libm::{ceilf, cosf, fabsf, floorf, sinf, tanf};
-use core::f32::consts::{PI, FRAC_PI_2};
+use libm::{cosf, fabsf, sinf, atan2f};
 
 use rand::{SeedableRng, Rng};
 use rand::rngs::SmallRng;
@@ -21,7 +20,7 @@ use crate::wasm4::{
 use maze_gen::{find_passages, find_walls, there_is_no_passage_here};
 use crate::arms::{Ammo, Bullet};
 
-use crate::util::{distance, get_index, point_in_wall};
+use crate::util::{distance, get_index};
 
 #[derive(Clone, Copy)]
 pub enum View {
@@ -124,8 +123,7 @@ impl State {
         let mut player_y = self.player_y[pidx];
         let mut player_angle = self.player_angle[pidx];
 
-        // Store the current position and index in case we need to undo a move.
-        let previous_position = (player_x, player_y);
+        // Store the current index in case we need to undo a move.
         let previous_index = get_index(player_x, player_y, WIDTH, HEIGHT);
 
         // Tentative updates to player position and orientation.
@@ -173,7 +171,7 @@ impl State {
         if shoot { 
             // Find the first loaded ammo
             match self.player_ammo[pidx].iter_mut().find(|&&mut a| a == Ammo::Loaded) {
-                Some(mut ammo) => {
+                Some(ammo) => {
                     // Change it to reloading
                     *ammo = Ammo::Reloading(RELOAD_TIME);
                     trace("Shot bullet");
@@ -185,7 +183,7 @@ impl State {
                             self.player_x[pidx],
                             self.player_y[pidx],
                             pidx,
-                            self.player_angle[pidx] + (rng.gen::<f32>() - 0.5)/10.0, // TODO: Add random jitter
+                            self.player_angle[pidx] + (rng.gen::<f32>() - 0.5)/10.0,
                             true
                         )
                     );
@@ -201,7 +199,7 @@ impl State {
         // Find the first ammo that is not loaded and incrementally reload it.
         // Spent ammo take RELOAD_TIME frames to reload and are reloaded one at a time.
         match self.player_ammo[pidx].iter_mut().find(|&&mut a| a != Ammo::Loaded) {
-            Some(mut ammo) => match ammo {
+            Some(ammo) => match ammo {
                 // Decrement time to reload until we reach 0 (means we are loaded)
                 Ammo::Reloading(time_to_reload) => {
                     if *time_to_reload > 0 {
@@ -233,7 +231,6 @@ impl State {
                 there_is_no_passage_here(previous_index, new_index, &self.passages)
             ) { // ... mark inflight as false.
                 b.inflight = false;
-                trace("Bullet done");
             }
             
             if b.inflight {
@@ -246,18 +243,19 @@ impl State {
                             HEIGHT
                         );
                         if player_index == new_index {
-                            let relative_angle = b.angle - self.player_angle[pidx];
+                            // Get the relative angle between bullet and player
+                            let rise = self.player_y[pidx] - self.player_y[b.owner];
+                            let run = self.player_x[pidx] - self.player_x[b.owner];
+                            let angle_to_player = -1.0 * atan2f(rise, run);
+                            let relative_angle = self.player_angle[pidx] - angle_to_player;
+
+                            // Determine collision window
                             let striking_distance = PLAYER_WIDTH * fabsf(cosf(relative_angle));
-                            // let mut data = String::<32>::new();
-                            // write!(data, "sd: {striking_distance}").unwrap();
-                            // trace(data);
                             let separation = distance(
                                 b.x - self.player_x[pidx], 
                                 b.y - self.player_y[pidx]
                             );
-                            // let mut data = String::<32>::new();
-                            // write!(data, "sep: {separation}").unwrap();
-                            // trace(data);
+
                             if separation <= striking_distance {
                                 trace("Hit!");
                                 self.player_life[pidx] -= 1;
@@ -268,8 +266,6 @@ impl State {
                 }
             }
         });
-
-        // TODO: Player collision detection.
 
         // Remove bullets that are no longer inflight.
         self.bullets = self.bullets.iter().map(|b| *b).filter(|b| b.inflight == true).collect();
