@@ -182,7 +182,6 @@ impl State {
                 Some(ammo) => {
                     // Change it to reloading
                     *ammo = Ammo::Reloading(RELOAD_TIME);
-                    trace("Shot bullet");
                     tone(1000 | (10 << 16), 10, 100, TONE_NOISE);
                     let mut rng = SmallRng::seed_from_u64(self.seed);
                     self.seed = rng.gen::<u64>();
@@ -214,8 +213,6 @@ impl State {
                         *ammo = Ammo::Reloading(*time_to_reload-1);
                     } else {
                         *ammo = Ammo::Loaded;
-                        trace("Loaded!");
-                        tone(50 | (150 << 16), 50, 100, TONE_NOISE);
                     }
                 }
                 _ => {}
@@ -265,7 +262,6 @@ impl State {
                             );
 
                             if separation <= striking_distance {
-                                trace("Hit!");
                                 self.player_life[pidx] -= 1;
                                 b.inflight = false;
                             }
