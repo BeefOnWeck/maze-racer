@@ -47,9 +47,9 @@ impl State {
 
     pub const fn new() -> State {
         State {
-            player_x: [0.5; NUM_PLAYERS],
-            player_y: [0.5; NUM_PLAYERS],
-            player_angle: [0.0; NUM_PLAYERS],
+            player_x: [0.5, 12.5, 0.5, 12.5],
+            player_y: [0.5, 0.5, 12.5, 12.5],
+            player_angle: [0.75, 2.25, 3.75, 5.25],
             player_ammo: [[Ammo::Loaded; BULLETS_PER_PLAYER]; NUM_PLAYERS],
             player_life: [5; NUM_PLAYERS],
             player_view: [View::FirstPerson; NUM_PLAYERS],

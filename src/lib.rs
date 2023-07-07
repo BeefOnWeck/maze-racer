@@ -254,7 +254,10 @@ unsafe fn update() {
             *DRAW_COLORS = 0x44;
             // Players
             for player in 0..NUM_PLAYERS {
-                rect((STATE.player_x[player]*10.0) as i32 + 15 - 3, (STATE.player_y[player]*10.0) as i32 + 15 - 3, 6, 6);
+                // Only draw players that are alive
+                if STATE.player_life[player] > 0 {
+                    rect((STATE.player_x[player]*10.0) as i32 + 15 - 3, (STATE.player_y[player]*10.0) as i32 + 15 - 3, 6, 6);
+                }
             }
             *DRAW_COLORS = 0x44;
             // Bullets
