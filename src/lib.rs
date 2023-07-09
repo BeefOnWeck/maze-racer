@@ -14,7 +14,7 @@ use heapless::{String};
 use rand::{rngs::SmallRng, SeedableRng};
 use util::point_in_wall;
 use wasm4::{
-    DRAW_COLORS, BLIT_1BPP, NETPLAY,
+    DRAW_COLORS, BLIT_1BPP, NETPLAY, PALETTE,
     GAMEPAD1, GAMEPAD2, GAMEPAD3, GAMEPAD4,
     BUTTON_UP, BUTTON_DOWN,
     BUTTON_LEFT, BUTTON_RIGHT,
@@ -36,6 +36,8 @@ static mut PREVIOUS_GAMEPAD4: u8 = 0;
 
 #[no_mangle]
 unsafe fn start() {
+
+    *PALETTE = [0xfff6d3, 0xeb6b6f, 0xf9a875, 0x7c3f58];
 
     let mut buffer = [0u8; core::mem::size_of::<i32>()];
     diskr(buffer.as_mut_ptr(), buffer.len() as u32);
