@@ -1,5 +1,5 @@
 use core::f32::consts::{PI, FRAC_PI_2};
-use libm::{ceilf, cosf, fabsf, floorf, tanf, atan2f};
+use libm::{ceilf, cosf, fabsf, floorf, tanf, atan2f, sinf, powf};
 use heapless::Vec;
 
 use crate::constants::{
@@ -16,13 +16,13 @@ pub fn get_player_view(
     player_x: [f32; NUM_PLAYERS],
     player_y: [f32; NUM_PLAYERS],
     player_life: [i32; NUM_PLAYERS]
-) -> [(i32, i32, u32, u32, f32, bool, bool); NUM_PLAYERS] {
+) -> [(i32, i32, u32, u32, f32, bool, bool, bool); NUM_PLAYERS] {
 
     let fov_upper_limit = player_angle[player_index] + HALF_FOV;
     let fov_lower_limit = fov_upper_limit - (159.0 * ANGLE_STEP);
 
     // Each rect defined by: x position, y position, width, height, distance, and visibility flag
-    let mut rects = [(0, 0, 0, 0, 0.0, false, false); NUM_PLAYERS];
+    let mut rects = [(0, 0, 0, 0, 0.0, false, false, false); NUM_PLAYERS];
 
     for index in 0..NUM_PLAYERS {
         if index != player_index {
@@ -65,8 +65,14 @@ pub fn get_player_view(
                     // Vertical correction to account for size
                     let v_position = 80 - ( size as f32 / 2.0 ) as i32;
 
+                    // Is this player facing me?
+                    let sum_of_squares = 
+                        powf(cosf(player_angle[index]) + cosf(angle_to_player), 2.0) +
+                        powf(sinf(player_angle[index]) + sinf(angle_to_player), 2.0);
+                    let facing_me = sum_of_squares < 2.0;
+
                     // Update the view for this player with this index
-                    rects[index] = (h_position, v_position, width, size, distance_to_player, true, true);
+                    rects[index] = (h_position, v_position, width, size, distance_to_player, facing_me, alive, true);
                 }
             }
         }
