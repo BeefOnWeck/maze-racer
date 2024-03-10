@@ -1,7 +1,9 @@
-use libm::{cosf, fabsf, sinf, atan2f};
+use libm::{atan2f, cosf, fabsf, floorf, sinf};
+use core::f32::consts::{PI};
 
 use rand::{SeedableRng, Rng};
 use rand::rngs::SmallRng;
+use rand::seq::SliceRandom;
 
 use core::fmt::Write;
 use heapless::{String,Vec};
@@ -20,7 +22,7 @@ use crate::wasm4::{
 use maze_gen::{find_passages, find_walls, there_is_no_passage_here};
 use crate::arms::{Ammo, Bullet};
 
-use crate::util::{distance, get_index};
+use crate::util::{distance, get_center_from_index, get_index};
 
 #[derive(Clone, Copy)]
 pub enum View {
@@ -40,6 +42,9 @@ pub struct State {
     passages: Vec<(usize,usize),MAX_PASSAGES>,
     pub horizontal_walls: Vec<u16,{HEIGHT+1}>,
     pub vertical_walls: Vec<u16,{WIDTH+1}>,
+    paths: Vec::<usize, MAX_PASSAGES>,
+    pruned_path: Vec::<usize, MAX_PASSAGES>,
+    stack: Vec::<usize, MAX_PASSAGES>,
     seed: u64
 }
 
@@ -58,6 +63,9 @@ impl State {
             passages: Vec::<(usize,usize),MAX_PASSAGES>::new(),
             horizontal_walls: Vec::<u16,{HEIGHT+1}>::new(),
             vertical_walls: Vec::<u16,{WIDTH+1}>::new(),
+            paths: Vec::<usize, MAX_PASSAGES>::new(),
+            pruned_path: Vec::<usize, MAX_PASSAGES>::new(),
+            stack: Vec::<usize, MAX_PASSAGES>::new(),
             seed: 0
         }
     }
@@ -82,11 +90,13 @@ impl State {
     /// Update the game state based on user input.
     pub fn update(
         &mut self, 
-        p1_up: bool, p1_down: bool, p1_left: bool, p1_right: bool, p1_shoot: bool, p1_toggle_view: bool,
-        p2_up: bool, p2_down: bool, p2_left: bool, p2_right: bool, p2_shoot: bool, p2_toggle_view: bool,
-        p3_up: bool, p3_down: bool, p3_left: bool, p3_right: bool, p3_shoot: bool, p3_toggle_view: bool,
-        p4_up: bool, p4_down: bool, p4_left: bool, p4_right: bool, p4_shoot: bool, p4_toggle_view: bool
+        p1_up: bool, p1_down: bool, p1_left: bool, p1_right: bool, p1_shoot: bool, p1_toggle_view: bool
     ) {
+        // AI Update for Players 2, 3, 4
+        let (p2_up, p2_down, p2_left, p2_right, p2_shoot, p2_toggle_view) = self.update_enemy(2);
+        let (p3_up, p3_down, p3_left, p3_right, p3_shoot, p3_toggle_view) = self.update_enemy(3);
+        let (p4_up, p4_down, p4_left, p4_right, p4_shoot, p4_toggle_view) = self.update_enemy(4);
+
         // Player 1
         if self.player_life[0] > 0 {
             self.update_player(0, p1_up, p1_down, p1_left, p1_right);
@@ -273,5 +283,181 @@ impl State {
 
         // Remove bullets that are no longer inflight.
         self.bullets = self.bullets.iter().map(|b| *b).filter(|b| b.inflight == true).collect();
+    }
+
+    fn update_enemy(&mut self, pid: usize) -> (bool,bool,bool,bool,bool,bool) {
+
+        let idx = pid - 1;
+        let mut rng = SmallRng::seed_from_u64(self.seed);
+        self.seed = rng.gen::<u64>();
+
+        let enemy_index = get_index(self.player_x[idx], self.player_y[idx], WIDTH, HEIGHT);
+        let player_index = get_index(self.player_x[0], self.player_y[0], WIDTH, HEIGHT);
+
+        // let mut data = String::<32>::new();
+        // write!(data, "1:{idx}, 2:{enemy_index}, 3:{player_index}").unwrap();
+        // trace(data);
+
+        self.visited.clear();
+        self.visited.extend_from_slice(&[false;NUM_CELLS]).unwrap();
+        self.paths.clear();
+        self.pruned_path.clear();
+        self.stack.clear();
+
+        State::find_path(
+            enemy_index, 
+            player_index, 
+            WIDTH, HEIGHT, 
+            &mut self.passages, 
+            &mut self.visited, 
+            &mut self.stack, 
+            &mut self.paths, 
+            &mut self.pruned_path, 
+            &mut rng
+        );
+
+        let target_index;
+        if self.pruned_path.len() > 1 {
+            target_index = self.pruned_path.remove(1);
+        } else {
+            target_index = enemy_index;
+        }
+
+        let (target_x, target_y) = get_center_from_index(target_index, WIDTH, HEIGHT);
+
+        // Calculate the angle and unwrap
+        let enemy_angle = self.player_angle[idx];
+        let rise = target_y - self.player_y[idx];
+        let run = target_x - self.player_x[idx];
+        let target_angle = -1.0 * atan2f(rise, run);
+        let num_wraps = floorf((target_angle - enemy_angle)/(2.0 * PI));
+        let unwrapped = target_angle - 2.0 * PI * num_wraps;
+        let extra_unwrapped = unwrapped - 2.0 * PI;
+
+        // Sometimes unwrapping is off by one (end condition)
+        let extra_is_closer = fabsf(enemy_angle - unwrapped) > fabsf(enemy_angle - extra_unwrapped);
+        let unwrapped_angle = if extra_is_closer {
+            extra_unwrapped
+        } else {
+            unwrapped
+        };
+
+        let mut data = String::<32>::new();
+
+        if fabsf(target_angle) <= 0.08 {
+            let target_distance = distance(rise, run);
+            if target_distance < 0.05 {
+                (true,false,false,false,false,false)
+            } else {
+                (false,false,false,false,false,false)
+            }
+        } else if target_angle > 0.08 {
+            if pid == 2 {
+                write!(data, "1: {target_angle}, 2: {unwrapped_angle}\n").unwrap();
+                trace(data);
+                trace("right\n");
+            }
+            (false,false,false,true,false,false)
+        } else {
+            if pid == 2 {
+                write!(data, "1: {target_angle}, 2: {unwrapped_angle}\n").unwrap();
+                trace(data);
+                trace("left\n");
+            }
+            (false,false,true,false,false,false)
+        }
+        // (false,false,false,false,false,false)
+    }
+
+    fn find_path<const M: usize, const N: usize>(
+        start: usize,
+        end: usize,
+        width: usize, 
+        height: usize, 
+        passages: &mut Vec<(usize,usize),N>,
+        visited: &mut Vec<bool,M>,
+        stack: &mut Vec<usize,N>,
+        paths: &mut Vec<usize,N>,
+        pruned_path: &mut Vec<usize,N>,
+        rng: &mut SmallRng
+    ) {
+    
+        visited[start] = true;
+        stack.push(start).unwrap();
+        let mut still_looking = true;
+        let mut checkpoint = start;
+    
+        while let Some(node) = stack.pop() {
+            if still_looking {
+                visited[node] = true;
+                let neighbors = State::find_neighbors(node, width, height);
+                let mut potential_paths: Vec<usize,4> = neighbors.into_iter()
+                    .flatten() // Option implements IntoIter
+                    .filter(|&n| visited[n] == false)
+                    .filter(|&n| there_is_no_passage_here(node, n, passages) == false)
+                    .collect();
+                potential_paths.shuffle(rng);
+    
+                if node == end {
+                    paths.push(node).unwrap();
+                    still_looking = false;
+                } else if potential_paths.len() > 1 {
+                    checkpoint = node;
+                    paths.push(node).unwrap();
+                } else if potential_paths.len() == 0 {
+                    while let Some(p) = paths.pop() {
+                        if p == checkpoint {
+                            paths.push(checkpoint).unwrap();
+                            break;
+                        }
+                    }
+                } else {
+                    paths.push(node).unwrap();
+                }
+    
+                for pass in potential_paths {
+                    stack.push(pass).unwrap();
+                }
+            }
+        }
+    
+        let mut last_node = paths.pop().unwrap();
+        pruned_path.insert(0, last_node).unwrap();
+        while let Some(node) = paths.pop() {
+            if there_is_no_passage_here(last_node, node, passages) == false {
+                pruned_path.insert(0, node).unwrap();
+                last_node = node;
+            }
+        }
+    }
+
+    fn find_neighbors(index: usize, width: usize, height: usize) -> [Option<usize>;4] {
+        let num_cells = width * height;
+    
+        let up = if index < num_cells - width {
+            Some(index + width)
+        } else {
+            None
+        };
+    
+        let down = if index > width - 1 {
+            Some(index - width)
+        } else {
+            None
+        };
+    
+        let left = if index % width != 0 {
+            Some(index - 1)
+        } else {
+            None
+        };
+    
+        let right = if (index + 1) % width != 0 {
+            Some(index + 1)
+        } else {
+            None
+        };
+    
+        return [up, down, left, right];
     }
 }

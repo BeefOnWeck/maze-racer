@@ -49,33 +49,17 @@ unsafe fn start() {
 
 #[no_mangle]
 unsafe fn update() {
+
     STATE.update(
         *GAMEPAD1 & BUTTON_UP != 0,
         *GAMEPAD1 & BUTTON_DOWN != 0,
         *GAMEPAD1 & BUTTON_LEFT != 0,
         *GAMEPAD1 & BUTTON_RIGHT != 0,
         *GAMEPAD1 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD1) & BUTTON_1 != 0,
-        *GAMEPAD1 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD1) & BUTTON_2 != 0,
-        *GAMEPAD2 & BUTTON_UP != 0,
-        *GAMEPAD2 & BUTTON_DOWN != 0,
-        *GAMEPAD2 & BUTTON_LEFT != 0,
-        *GAMEPAD2 & BUTTON_RIGHT != 0,
-        *GAMEPAD2 & (*GAMEPAD2 ^ PREVIOUS_GAMEPAD2) & BUTTON_1 != 0,
-        *GAMEPAD2 & (*GAMEPAD2 ^ PREVIOUS_GAMEPAD2) & BUTTON_2 != 0,
-        *GAMEPAD3 & BUTTON_UP != 0,
-        *GAMEPAD3 & BUTTON_DOWN != 0,
-        *GAMEPAD3 & BUTTON_LEFT != 0,
-        *GAMEPAD3 & BUTTON_RIGHT != 0,
-        *GAMEPAD3 & (*GAMEPAD3 ^ PREVIOUS_GAMEPAD3) & BUTTON_1 != 0,
-        *GAMEPAD3 & (*GAMEPAD3 ^ PREVIOUS_GAMEPAD3) & BUTTON_2 != 0,
-        *GAMEPAD4 & BUTTON_UP != 0,
-        *GAMEPAD4 & BUTTON_DOWN != 0,
-        *GAMEPAD4 & BUTTON_LEFT != 0,
-        *GAMEPAD4 & BUTTON_RIGHT != 0,
-        *GAMEPAD4 & (*GAMEPAD4 ^ PREVIOUS_GAMEPAD4) & BUTTON_1 != 0,
-        *GAMEPAD4 & (*GAMEPAD4 ^ PREVIOUS_GAMEPAD4) & BUTTON_2 != 0,
+        *GAMEPAD1 & (*GAMEPAD1 ^ PREVIOUS_GAMEPAD1) & BUTTON_2 != 0
     );
 
+    // TODO: Remove netplay
     let pid = if *NETPLAY & 0b100 != 0 {
         (*NETPLAY & 0b011) as usize
     } else {
