@@ -294,10 +294,6 @@ impl State {
         let enemy_index = get_index(self.player_x[idx], self.player_y[idx], WIDTH, HEIGHT);
         let player_index = get_index(self.player_x[0], self.player_y[0], WIDTH, HEIGHT);
 
-        // let mut data = String::<32>::new();
-        // write!(data, "1:{idx}, 2:{enemy_index}, 3:{player_index}").unwrap();
-        // trace(data);
-
         self.visited.clear();
         self.visited.extend_from_slice(&[false;NUM_CELLS]).unwrap();
         self.paths.clear();
@@ -330,6 +326,7 @@ impl State {
         let rise = target_y - self.player_y[idx];
         let run = target_x - self.player_x[idx];
         let target_angle = -1.0 * atan2f(rise, run);
+
         let num_wraps = floorf((target_angle - enemy_angle)/(2.0 * PI));
         let unwrapped = target_angle - 2.0 * PI * num_wraps;
         let extra_unwrapped = unwrapped - 2.0 * PI;
@@ -342,31 +339,26 @@ impl State {
             unwrapped
         };
 
-        let mut data = String::<32>::new();
+        let angle_diff = unwrapped_angle - enemy_angle;
 
-        if fabsf(target_angle) <= 0.08 {
+        // let mut data = String::<32>::new();
+        // if pid == 2 {
+        //     write!(data, "1: {angle_diff}, 2: {enemy_angle}\n").unwrap();
+        //     trace(data);
+        // }
+
+        if fabsf(angle_diff) <= 0.08 {
             let target_distance = distance(rise, run);
             if target_distance < 0.05 {
-                (true,false,false,false,false,false)
-            } else {
                 (false,false,false,false,false,false)
+            } else {
+                (true,false,false,false,false,false)
             }
-        } else if target_angle > 0.08 {
-            if pid == 2 {
-                write!(data, "1: {target_angle}, 2: {unwrapped_angle}\n").unwrap();
-                trace(data);
-                trace("right\n");
-            }
-            (false,false,false,true,false,false)
-        } else {
-            if pid == 2 {
-                write!(data, "1: {target_angle}, 2: {unwrapped_angle}\n").unwrap();
-                trace(data);
-                trace("left\n");
-            }
+        } else if angle_diff > 0.08 {
             (false,false,true,false,false,false)
+        } else {
+            (false,false,false,true,false,false)
         }
-        // (false,false,false,false,false,false)
     }
 
     fn find_path<const M: usize, const N: usize>(
