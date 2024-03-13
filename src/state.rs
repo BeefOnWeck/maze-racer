@@ -347,12 +347,18 @@ impl State {
         //     trace(data);
         // }
 
+        let distance_to_player = distance(
+            self.player_y[0] - self.player_y[idx],
+            self.player_x[0] - self.player_x[idx] 
+        );
+        let fire = distance_to_player <= 3.0;
+
         if fabsf(angle_diff) <= 0.08 {
             let target_distance = distance(rise, run);
             if target_distance < 0.05 {
-                (false,false,false,false,false,false)
+                (false,false,false,false,fire,false)
             } else {
-                (true,false,false,false,false,false)
+                (true,false,false,false,fire,false)
             }
         } else if angle_diff > 0.08 {
             (false,false,true,false,false,false)
