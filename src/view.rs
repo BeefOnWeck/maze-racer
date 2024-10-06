@@ -87,9 +87,11 @@ pub fn get_ammo_view(player_ammo: [Ammo; BULLETS_PER_PLAYER]) -> [(i32, i32, u32
 
     // Each player ammunition is represented by x and y positions, size, correction, and status.
     let mut ammo_dashboard: [(i32, i32, u32, i32, u32); BULLETS_PER_PLAYER] = [
+        (110, 4, 8, 0, 0),
         (120, 4, 8, 0, 0),
         (130, 4, 8, 0, 0),
-        (140, 4, 8, 0, 0)
+        (140, 4, 8, 0, 0),
+        (150, 4, 8, 0, 0)
     ];
 
     // Determine status for each ammo

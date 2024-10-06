@@ -144,20 +144,23 @@ impl State {
         // Store the current index in case we need to undo a move.
         let previous_index = get_index(player_x, player_y, WIDTH, HEIGHT);
 
+        // Enemy players should move more slowly
+        let step_size = if pidx > 0 {STEP_SIZE * 0.65} else {STEP_SIZE};
+
         // Tentative updates to player position and orientation.
         if up {
-            player_x += cosf(player_angle) * STEP_SIZE;
-            player_y += -sinf(player_angle) * STEP_SIZE;
+            player_x += cosf(player_angle) * step_size;
+            player_y += -sinf(player_angle) * step_size;
         }
         if down {
-            player_x -= cosf(player_angle) * STEP_SIZE;
-            player_y -= -sinf(player_angle) * STEP_SIZE;
+            player_x -= cosf(player_angle) * step_size;
+            player_y -= -sinf(player_angle) * step_size;
         }
         if right {
-            player_angle -= STEP_SIZE;
+            player_angle -= step_size;
         }
         if left {
-            player_angle += STEP_SIZE;
+            player_angle += step_size;
         }
 
         // If the player has moved to a new cell, then new_index will differ from previous_index.
@@ -185,8 +188,15 @@ impl State {
 
     /// Fires a bullet in response to player input; incrementally reloads spent ammo.
     fn update_ammo(&mut self, pidx: usize, shoot: bool) {
+        // Kludge to limit enemies to just one bullet
+        if pidx > 0 {
+            let first_bullet = self.player_ammo[pidx][0];
+            self.player_ammo[pidx] = [Ammo::Reloading(RELOAD_TIME); BULLETS_PER_PLAYER];
+            self.player_ammo[pidx][0] = first_bullet;
+        }
+
         // When the player presses the x button.
-        if shoot { 
+        if shoot {
             // Find the first loaded ammo
             match self.player_ammo[pidx].iter_mut().find(|&&mut a| a == Ammo::Loaded) {
                 Some(ammo) => {
