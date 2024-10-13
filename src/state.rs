@@ -105,6 +105,9 @@ impl State {
             self.update_player(0, p1_up, p1_down, p1_left, p1_right);
             self.update_ammo(0, p1_shoot);
             self.update_view(0, p1_toggle_view);
+        } else {
+            self.player_view[0] = View::FirstPerson;
+            self.accumulator = 0;
         }
         // Player 2
         if self.player_life[1] > 0 {
@@ -130,7 +133,13 @@ impl State {
         self.accumulator += 1;
         if self.accumulator == 59 {
             self.accumulator = 0;
-            self.score -= 1;
+            if self.player_life[0] > 0 && (
+                self.player_life[1] > 0 ||
+                self.player_life[2] > 0 ||
+                self.player_life[3] > 0 
+            ) {
+                self.score -= 1;
+            }
             // let temp = self.score;
             // let mut data = String::<64>::new();
             // write!(data, "{temp}").unwrap();
@@ -296,6 +305,9 @@ impl State {
 
                             if separation <= striking_distance {
                                 self.player_life[pidx] -= 1;
+                                if self.player_life[pidx] == 0 && b.owner == 0 {
+                                    self.score += 60;
+                                }
                                 b.inflight = false;
                             }
                         }
