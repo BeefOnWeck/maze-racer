@@ -1,11 +1,11 @@
 use libm::{atan2f, cosf, fabsf, floorf, sinf};
-use core::f32::consts::PI;
+use core::{f32::consts::PI, fmt::Write};
 
 use rand::{SeedableRng, Rng};
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 
-use heapless::Vec;
+use heapless::{String, Vec};
 
 use crate::constants::{
     WIDTH, HEIGHT, NUM_CELLS, MAX_PASSAGES, STEP_SIZE, BULLET_SPEED, 
@@ -44,7 +44,9 @@ pub struct State {
     paths: Vec::<usize, MAX_PASSAGES>,
     pruned_path: Vec::<usize, MAX_PASSAGES>,
     stack: Vec::<usize, MAX_PASSAGES>,
-    seed: u64
+    seed: u64,
+    pub score: i32,
+    accumulator: u8
 }
 
 impl State {
@@ -65,7 +67,9 @@ impl State {
             paths: Vec::<usize, MAX_PASSAGES>::new(),
             pruned_path: Vec::<usize, MAX_PASSAGES>::new(),
             stack: Vec::<usize, MAX_PASSAGES>::new(),
-            seed: 0
+            seed: 0,
+            score: 200,
+            accumulator: 0
         }
     }
 
@@ -122,6 +126,16 @@ impl State {
         }
         // Bullets in flight
         self.update_bullets();
+
+        self.accumulator += 1;
+        if self.accumulator == 59 {
+            self.accumulator = 0;
+            self.score -= 1;
+            // let temp = self.score;
+            // let mut data = String::<64>::new();
+            // write!(data, "{temp}").unwrap();
+            // trace(data);
+        }
     }
 
     /// Toggle a players view
@@ -215,10 +229,10 @@ impl State {
                     );
                     match attempt {
                         Ok(()) => {},
-                        Err(_) => trace("Reached max number of bullets in the air.")
+                        Err(_) => {}
                     }
                 },
-                None => trace("Empty")
+                None => {}
             }
         }
 

@@ -215,6 +215,12 @@ unsafe fn update() {
             for heart in 1..=num_hearts {
                 blit(&HEART_ICON, 10*heart, 4, 8, 8, BLIT_1BPP);
             }
+
+            // Draw the score
+            let mut message = String::<32>::new();
+            let score = STATE.score;
+            write!(message, "Score: {score}").unwrap();
+            text(message, 10, 16);
         },
         View::TopDown => {
             // NOTE: Right now the top-down view is just a real-time display of the maze.
