@@ -1,12 +1,11 @@
 use libm::{atan2f, cosf, fabsf, floorf, sinf};
-use core::f32::consts::{PI};
+use core::f32::consts::PI;
 
 use rand::{SeedableRng, Rng};
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 
-use core::fmt::Write;
-use heapless::{String,Vec};
+use heapless::Vec;
 
 use crate::constants::{
     WIDTH, HEIGHT, NUM_CELLS, MAX_PASSAGES, STEP_SIZE, BULLET_SPEED, 
@@ -365,7 +364,7 @@ impl State {
 
         if fabsf(angle_diff) <= 0.08 {
             let target_distance = distance(rise, run);
-            if target_distance < 0.05 {
+            if target_distance < 0.5 {
                 (false,false,false,false,fire,false)
             } else {
                 (true,false,false,false,fire,false)

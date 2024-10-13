@@ -270,12 +270,12 @@ unsafe fn update() {
                     let mut blit_mask = [false; 64];
                     let mut n = 0;
                     for (y, x) in Y.into_iter().zip(X) {
-                        let xp = -1.0 * x;// - 0.99;
-                        let yp = y;// - 0.99;
+                        let xp = -1.0 * x;
+                        let yp = y;
                         let blit_angle = -1.0 * atan2f(yp, xp);
-                        let mut data = String::<64>::new();
-                        write!(data, "y: {yp}, x: {xp}, a: {blit_angle}").unwrap();
-                        trace(data);
+                        // let mut data = String::<64>::new();
+                        // write!(data, "y: {yp}, x: {xp}, a: {blit_angle}").unwrap();
+                        // trace(data);
                         let num_wraps = floorf((blit_angle - STATE.player_angle[player])/(2.0 * PI));
                         let unwrapped = blit_angle - 2.0 * PI * num_wraps;
                         let extra_unwrapped = unwrapped - 2.0 * PI;
