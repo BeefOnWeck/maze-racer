@@ -21,7 +21,8 @@ use wasm4::{
     BUTTON_1, BUTTON_2,
     vline, oval, rect, blit, line, diskr, trace, text
 };
-use core::fmt::Write;
+use core::{f32::consts::PI, fmt::Write};
+use libm::{atan2f, fabsf, floorf};
 
 use state::{State, View};
 use constants::{WIDTH, HEIGHT, NUM_PLAYERS};
@@ -241,11 +242,81 @@ unsafe fn update() {
                 }
             }
             *DRAW_COLORS = 0x44;
+            *DRAW_COLORS = 0x04;
             // Players
             for player in 0..NUM_PLAYERS {
                 // Only draw players that are alive
                 if STATE.player_life[player] > 0 {
-                    rect((STATE.player_x[player]*10.0) as i32 + 15 - 3, (STATE.player_y[player]*10.0) as i32 + 15 - 3, 6, 6);
+                    const X: [f32; 64] = [
+                        -4.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 4.0,
+                        -4.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 4.0,
+                        -4.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 4.0,
+                        -4.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 4.0,
+                        -4.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 4.0,
+                        -4.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 4.0,
+                        -4.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 4.0,
+                        -4.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 4.0,
+                    ];
+                    const Y: [f32; 64] = [
+                        -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0,
+                        -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0,
+                        -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0,
+                        -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
+                        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                        2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
+                        3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0,
+                        4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0,
+                    ];
+                    let mut blit_mask = [false; 64];
+                    let mut n = 0;
+                    for (y, x) in Y.into_iter().zip(X) {
+                        let xp = -1.0 * x;// - 0.99;
+                        let yp = y;// - 0.99;
+                        let blit_angle = -1.0 * atan2f(yp, xp);
+                        let mut data = String::<64>::new();
+                        write!(data, "y: {yp}, x: {xp}, a: {blit_angle}").unwrap();
+                        trace(data);
+                        let num_wraps = floorf((blit_angle - STATE.player_angle[player])/(2.0 * PI));
+                        let unwrapped = blit_angle - 2.0 * PI * num_wraps;
+                        let extra_unwrapped = unwrapped - 2.0 * PI;
+
+                        let unwrap_diff = fabsf(STATE.player_angle[player] - unwrapped);
+                        let extra_diff = fabsf(STATE.player_angle[player] - extra_unwrapped);
+                        let extra_is_closer = extra_diff < unwrap_diff;
+                        let angle_difference = if extra_is_closer {
+                            extra_diff
+                        } else {
+                            unwrap_diff
+                        };
+                        blit_mask[n] = if
+                            (angle_difference + 0.4 > PI / 2.0 && angle_difference - 0.4 < PI / 2.0) ||
+                            (angle_difference + 0.4 > -1.0 * PI / 2.0 && angle_difference - 0.4 < -1.0 * PI / 2.0) ||
+                            n == 27 || n == 28 || n == 35 || n == 36 { true } 
+                        else { false };
+                        n += 1;
+                    }
+                    let mut player_blit: [u8; 8] = [
+                        0b11111111,
+                        0b11111111,
+                        0b11111111,
+                        0b11111111,
+                        0b11111111,
+                        0b11111111,
+                        0b11111111,
+                        0b11111111,
+                    ];
+                    n = 0;
+                    for bm in blit_mask {
+                        let row = n / 8;
+                        let col = n - row*8;
+                        if bm == true {
+                            if (row != 0 && row != 7 && col != 0 && col != 7) {
+                                player_blit[row] -= 0b1 << col;
+                            }
+                        }
+                        n += 1;
+                    }
+                    blit(&player_blit, (STATE.player_x[player]*10.0) as i32 + 15 - 3, (STATE.player_y[player]*10.0) as i32 + 15 - 3, 8, 8, BLIT_1BPP);
                 }
             }
             *DRAW_COLORS = 0x44;
